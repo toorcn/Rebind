@@ -7,6 +7,10 @@
 
 ---
 
+
+## UPDATE 2026-09-26 ~08:13 JST — World surface retargeted
+Primary prize framing is now **Best Use of World ID for Agents** ($5k): integrate `sandbox.auth.world.org` + AgentPlugin for **rebind**, full journey + fail path + backend validation + INTEGRATION-DEBRIEF.md. AgentBook #37 remains motivation only. See updated `SPEC.md` / `confirmation-slate-c3.md` Q1–Q6.
+
 ## A. How to behave with Hong
 
 1. **Brief first** — first sentence answers the question asked.

@@ -1,129 +1,147 @@
 # C3 — Spec & weekend plan
 **Event:** ETHGlobal Tokyo 2026  
-**Headline:** AgentBook revoke / rotate as sign-capability lifecycle (app-layer honest)  
-**Primary prize:** World ID for agents (AgentKit + AgentBook)  
-**Updated:** 2026-09-26 JST · §8 locked by Hong
+**Headline:** Agent key revoke/rotate lifecycle; **rebind** = fresh World ID for Agents auth  
+**Primary prize:** Best Use of World ID for Agents ($5k) — `sandbox.auth.world.org` + AgentPlugin  
+**Updated:** 2026-09-26 ~08:13 JST · §8 locked · World surface retargeted to track quals
 
 ---
 
 ## 1. Problem (judge must feel)
 
-World AgentBook today has **no revoke**. A compromised agent wallet can still resolve via `lookupHuman`. Operators need mid-loop **deny** and **rotate** that actually bind to paid capability — not a UI toggle.
+Compromised agent keys keep working after a cosmetic “revoke.” Operators need mid-loop **deny** and **rotate**, and rotate must require a **fresh human verification** via official **World ID for Agents** — not a login sticker, not free-trial.
 
-**Evidence (cite, don’t overclaim):** worldcoin/agentkit #37 RFC (revoke), #23 unregister block; SDK null for both unregistered and RPC failure. Weekend ships **app-layer** deny/rotate registry composed with AgentKit — **not** a mainnet AgentBook opcode.
+**Honesty:** App-layer deny/rotate registry is the product policy layer. Prize integration is World ID for Agents on the event **dev** env. Do not claim a mainnet AgentBook opcode. Cite agentkit #37/#23 only as motivation for why revoke/rotate matters.
 
 ---
 
 ## 2. Product one-liner
 
-After compromise or rotate, the agent’s **old signing key fails mid-loop**; the win path re-binds capability only under a **fresh World/AgentBook-backed proof**. Naive foil keeps granting with the revoked key.
+After compromise or rotate, the old agent key fails mid-loop; the new key gains paid capability only after a **backend-validated World ID for Agents** journey (request → human completes → validated result). Denied/expired/cancelled → no grant. Foil = revoke theater (still grants).
 
 ---
 
 ## 3. Architecture
 
 ```
-[Agent key K] --sign--> [Paygate grant]
-                           |
-                           v
-                    [App registry]
-                    register | lookup | revoke | rotate
-                           |
-              Day1+: enforce revoked=false + mid-loop check
-              Day2+: rotate → require World re-bind before K2 grants
+[Agent key] --sign--> [Paygate grant]
+                         |
+                         v
+                  [App registry] register|lookup|revoke|rotate
+                         |
+              Day1+: enforce revoked + mid-loop check
+              Day2+: rotate/rebind → World ID for Agents (sandbox)
+                     backend validates → then grant
 ```
 
 | Component | Role |
 |-----------|------|
-| `AgentBookRegistry` | In-memory/sqlite: register, lookup, revoke(flag), rotate(old→new) |
-| `Paygate` | Express paid resource; checks registry on every grant |
-| `Foil mode` | Day 0: lookup ignores `revoked` (or session-start only) |
-| `Win mode` | Day 1+: deny if revoked; mid-loop re-check; Day 2 World re-bind on rotate |
-| World surface | Fresh AgentKit/AgentBook-backed proof gates re-bind (not login, not free-trial) |
+| App registry | register · lookup · revoke · rotate |
+| Paygate | grant only if not revoked (+ Day2 rebind proof) |
+| Foil mode | Day 0: ignores revoke |
+| Win mode | Day 1: revoke enforced mid-loop |
+| World surface | Day 2: **sandbox.auth.world.org** World ID for Agents / AgentPlugin for rebind |
 
 ---
 
-## 4. Demo film (90s target)
+## 4. Prize qualification checklist (Day 2 must hit)
 
-| Beat | What judges see | Pass |
-|------|-----------------|------|
-| 1 Setup | Register K; grant succeeds | Live |
-| 2 Foil | `revoke(K)`; same K still grants | REVOKE_INEFFECTIVE |
+| # | Requirement | How we show it |
+|---|-------------|----------------|
+| Q1 | Official World ID for Agents on **dev** env | Integrate `sandbox.auth.world.org` (+ AgentPlugin as needed) |
+| Q2 | Complete journey | Request → user completes → backend validates → protected grant |
+| Q3 | Unsuccessful path | Denied/expired/cancelled → protected action does **not** occur |
+| Q4 | Secure backend validation | Never treat raw client response as auth; no exposed client secrets |
+| Q5 | Integration debrief | Short note: time-to-first-success, friction, missing docs, #1 improvement |
+| Q6 | Not login-only | Rebind gates **mid-loop paid/agent action**, not app login |
+
+Mocks OK if event says proofs are mocked — still run full journey + fail path.
+
+---
+
+## 5. Demo film (90s)
+
+| Beat | Judge sees | Pass |
+|------|------------|------|
+| 1 Setup | Register K; grant OK | Live |
+| 2 Foil | revoke(K); K still grants | REVOKE_INEFFECTIVE |
 | 3 Win revoke | Mid-loop deny; K rejected | Old key dead |
-| 4 Rotate | K→K2 without World re-bind → fail | Bind required |
-| 5 World | Fresh proof → K2 grants; mute World → still fails | World load-bearing |
+| 4 Rotate | K→K2 without World rebind → fail | Bind required |
+| 5 World | Sandbox journey success → K2 grants | Q2 |
+| 6 Fail | Deny/expire/cancel → no grant | Q3 |
+| 7 Mute-World | Skip validation → win fails | M4 / slate |
 
 ---
 
-## 5. Mute tests (must break win)
+## 6. Mute tests
 
 | # | Mute | Expected fail |
 |---|------|---------------|
 | M1 | Deny-list off | Revoked K still grants |
-| M2 | No re-bind on rotate | K2 grants without World / or K+K2 both wrong |
-| M3 | Session-start check only | Revoke after start still grants |
-| M4 | Skip World on re-bind | Win path grants anyway → **slate fail** |
+| M2 | No rebind on rotate | K2 grants without World |
+| M3 | Session-start only | Revoke after start still grants |
+| M4 | Mute World / skip backend validate | Win grants anyway → **slate fail** |
 
 ---
 
-## 6. Build / not build
+## 7. Build / not build
 
-**Build:** app registry · paygate · foil · mid-loop revoke · World-gated rotate re-bind · mute film · README honesty  
+**Build:** registry · paygate · foil · mid-loop revoke · sandbox World ID for Agents rebind · fail path · backend validation · debrief · 90s film  
 
-**Do not build:** mainnet AgentBook opcode · free-trial win · World-as-login · C1 claim as headline · Alice≠Bob · Intercepta/observatory · Mandate402 · passport
+**Do not build:** mainnet AgentBook opcode · free-trial AgentKit win · World-as-login · C1 claim headline · Alice≠Bob · Intercepta/observatory · Mandate402 · passport
 
 ---
 
-## 7. Weekend plan
+## 8. Weekend shape
 
-### Day 0 — Foil (DONE)
-
-- [x] Registry API with revoke flag that UI can show
-- [x] Paygate that **does not** enforce revoke on grant
-- [x] `npm run foil-revoke` exits 0 → `REVOKE_INEFFECTIVE`
-- [x] README + DAY0-COMPLETION.md
-- [x] Commit main
+### Day 0 — Foil ✅
+- [x] Registry + paygate ignores revoke
+- [x] `npm run foil-revoke` → REVOKE_INEFFECTIVE
+- [x] SPEC / slate / HANDOFF
 
 ### Day 1 — Enforce lifecycle
-- [ ] Grant path: reject if `revoked`
-- [ ] Mid-loop / every-request check (not session cookie forever)
-- [ ] Rotate without re-bind: K2 cannot grant; K cannot grant
-- [ ] Foil mode flag kept for A/B film
-- [ ] Script: foil fails, win passes
+- [ ] Grant rejects if revoked (every request)
+- [ ] Rotate without rebind: K2 cannot grant
+- [ ] FOIL_MODE kept for A/B
+- [ ] `npm run win-revoke` + DAY1-COMPLETION
 
-### Day 2 — World principal + cut
-- [ ] Re-bind requires fresh World/AgentKit-backed proof (stub→real as time allows)
-- [ ] Mute-World film (M4)
-- [ ] 90s demo cut + one-pager for judges
-
----
-
-## 8. Success / kill
-
-**Ship if:** mute M4 fails the win; film shows foil vs win; docs honest about app-layer.  
-
-**Kill if:** win works with World muted; revoke is UI-only; sold as on-chain AgentBook fix; win = login/free-trial.
+### Day 2 — World ID for Agents (track)
+- [ ] Q1–Q6 above
+- [ ] Portal client on sandbox; AgentPlugin if required
+- [ ] INTEGRATION-DEBRIEF.md (Q5)
+- [ ] Mute-World film + 90s cut
 
 ---
 
-## 9. Repo layout (as built, Day 0)
+## 9. Kill criteria
+
+- Win works with World muted / without backend validation  
+- Revoke UI-only  
+- Sold as on-chain AgentBook fix  
+- Win = login or free-trial  
+- No unsuccessful path filmed  
+
+---
+
+## 10. Links (track)
+
+- Docs: http://sandbox.auth.world.org/docs  
+- Portal: http://sandbox.auth.world.org/portal  
+- AgentPlugin: https://github.com/worldcoin/world-id-agent-plugin  
+
+---
+
+## 11. Repo layout (target)
 
 ```
-src/registry.ts      # AgentBook-shaped store
-src/app.ts           # paygate grant path + registry HTTP (foil ignores revoke)
-src/server.ts        # wire registry + paygate
-src/sign.ts          # stub sign/verify (not a wallet, not AgentKit)
-src/foil-revoke.ts   # npm run foil-revoke
-README.md
-DAY0-COMPLETION.md
-SPEC.md              # this document
+src/registry.ts
+src/paygate.ts
+src/server.ts
+src/world-rebind.ts   # Day 2 sandbox validate
+scripts/foil-revoke.ts
+scripts/win-revoke.ts
+SPEC.md
+HANDOFF.md
+FULL_AGENT_HANDOFF.md
 docs/confirmation-slate-c3.md
+INTEGRATION-DEBRIEF.md  # Day 2
 ```
-
-Day 0 does not call World ID, IDKit, or live AgentKit.
-
----
-
-## 10. Constraints reminder
-
-Must bases: **x402 + AgentKit**. Buyer: integrator/security. Domain: code/devtools · research. Primary: **World ID for agents**.

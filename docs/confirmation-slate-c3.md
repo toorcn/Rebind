@@ -1,104 +1,45 @@
-# Confirmation slate — C3 (DRAFT for Hong §8)
+# Confirmation slate — C3 (UPDATED World surface)
 **Event:** ETHGlobal Tokyo 2026  
-**Updated:** 2026-09-26 ~07:35 JST  
-**Pivot:** Hong switched headline from C1 → **C3** (World ID for agents / AgentBook lifecycle)
-
----
+**Updated:** 2026-09-26 ~08:13 JST  
+**§8:** yes (Hong) · World surface retargeted to track quals
 
 ## 0. Locked constraints
 | Field | Value |
 |-------|--------|
-| Primary prize lens | **World ID for agents** (AgentKit + AgentBook); IDKit secondary only if a real human step appears |
-| Must bases | x402 + AgentKit |
-| Domain shortlist | code / devtools · research |
-| Buyer | integrator / security |
-| Hard nos | passport · thin market · World-as-login · free-trial/discount · Mandate402 reskin · Intercepta/observatory wrap · Alice≠Bob as headline · claiming on-chain AgentBook opcode |
+| Primary prize | **Best Use of World ID for Agents** ($5k) |
+| Must bases | x402 + AgentKit (policy) · **World ID for Agents sandbox** (prize) |
+| Domain | code/devtools · research |
+| Hard nos | passport · thin market · World-as-login · free-trial · Mandate402 · Intercepta/observatory · Alice≠Bob headline · on-chain AgentBook claim |
 
----
+## 1. Headline — LOCKED
+☑ **C3** revoke/rotate lifecycle · rebind = fresh World ID for Agents  
+☐ C1 archive · ☐ C2 out
 
-## 1. Headline spine — PROPOSED
-| Choose | ID | Gap | Stress |
-|--------|----|-----|--------|
-| ☐ | C1 | Pre-grant `(pay_id × resource)` claim + atomic CAIP-122 | WEAK–PASS — archived foil only |
-| ☐ | C2 | Unresolved settle → refuse re-auth (+ HITL) | PASS — not headline |
-| ☑ | **C3** | **AgentBook revoke / rotate as sign-capability lifecycle** | **PASS** |
+**One-liner:** Old key dies mid-loop after revoke; new key grants only after backend-validated World ID for Agents journey; denied/expired → no grant.
 
-**One-liner:** After compromise or rotate, the agent’s old signing key must fail mid-loop; win path re-binds capability only under a fresh World/AgentBook-backed proof. Naive foil keeps granting with the revoked key.
+## 2. World surface — LOCKED (retargeted)
+☑ **World ID for Agents** on `sandbox.auth.world.org` (+ AgentPlugin) for **rebind at rotate**  
+☐ AgentBook revoke alone as prize surface (motivation only)  
+☐ HITL IDKit-as-login  
+☐ CAIP-122 / free-trial AgentKit as win
 
-**Foil legs:** C1 DGR fixture stays in repo as archive, not pitch.
+**Mute-World fail:** skip sandbox validation → win still grants → slate fail.
 
-**Why this bind:** AgentBook today has no revoke; `lookupHuman` can still succeed for compromised wallets (worldcoin/agentkit #37 RFC, #23 unregister block). Product is **app-layer** deny-list / rotation registry composed with AgentKit — honest about not shipping a mainnet opcode.
+## 3. Film beats
+1 Setup · 2 Foil revoke theater · 3 Win revoke · 4 Rotate without rebind fails · 5 Sandbox success → grant · 6 Deny/expire → no grant · 7 Mute-World fails win
 
----
+## 4. Mutes M1–M4
+M1 deny-list off · M2 no rebind · M3 session-start only · M4 mute World backend validate
 
-## 2. World surface — PROPOSED
-| Choose | Surface |
-|--------|---------|
-| ☑ | **AgentBook revoke / rotate lifecycle** (primary) |
-| ☐ | HITL on payment intent (C2 — out) |
-| ☐ | CAIP-122 atomic consume as sole headline (C1 — out; may still appear as helper) |
+## 5. Building / not
+**Building:** app registry · foil · Day1 enforce · Day2 sandbox rebind + fail path + debrief  
+**Not:** free-trial win · login-only · mainnet AgentBook opcode · C1 headline
 
-**Mute-World expected fail:** rotated / new key never gains paid capability; or old key still passes after “revoke.”
+## 6. Thin-build kill
+Win without sandbox validate · UI-only revoke · free-trial · no fail path
 
-**Hard-no guard:** do not sell as “we patched AgentBook on-chain”; no World-as-login; no free-trial burn.
+## 7. Weekend
+Day0 ✅ foil · Day1 enforce · Day2 Q1–Q6 + debrief + 90s
 
----
-
-## 3. Demo film (draft)
-| Beat | Judge sees | Pass if |
-|------|------------|---------|
-| 1 Setup | Agent has World-backed sign capability bound to a paid resource path | Fixture live |
-| 2 Naive foil | Key marked compromised / “revoked” in UI but server still accepts signatures → grant continues | Revoke theater visible |
-| 3 Rotate | Operator rotates to new agent key; without World re-bind, new key cannot grant | Rotate without World fails |
-| 4 Win | Fresh World/AgentBook-backed re-bind → new key grants; old key rejected mid-loop | Lifecycle holds |
-| 5 Mute-World | Skip World re-bind step → win path still grants with rotated key | **slate fail if this works** |
-
-**Owned fixture:** ☑ yes — AgentBook-shaped registry stub + paygate that checks app deny/rotate list (real AgentKit calls where weekend allows; stub honest when RPC flaky)
-
----
-
-## 4. Mute tests
-| # | Mute | Expected fail |
-|---|------|---------------|
-| M1 | Mute revoke policy (deny-list off) | Old compromised key still grants |
-| M2 | Mute rotate re-bind | New key never usable / or old+new both work wrongly |
-| M3 | Mute mid-loop check (check only at session start) | Revoke after start still grants |
-| M4 | Mute World / skip fresh proof on re-bind | Win path grants anyway → **slate fail** |
-
----
-
-## 5. Building / not building
-**Building:** app-layer AgentBook-shaped registry (register · revoke · rotate · lookup) · paygate that consults it on grant · foil that ignores revoke · World/AgentKit re-bind on rotate · 90s film  
-
-**Not building:** mainnet AgentBook opcode · free-trial win · C1 claim as headline · Alice≠Bob · Intercepta/observatory · Mandate402 · passport · World-as-login
-
----
-
-## 6. Thin-build kill list
-- Win works with World muted → kill
-- “Revoke” is a UI toggle only, server never checks → kill
-- Sold as on-chain AgentBook fix → kill
-- Win = login / free-trial → kill
-- No mid-loop deny (session cookie forever) → kill
-
----
-
-## 7. Weekend shape
-| Day | Outcome |
-|-----|---------|
-| 0 | Foil: revoke theater / no mid-loop deny — old key still grants |
-| 1 | App revoke + rotate registry; old key dies mid-loop; rotate needs re-bind |
-| 2 | World/AgentKit fresh proof on re-bind + mute film + 90s cut |
-
----
-
-## 8. Confirm (Hong) — blank until you say yes
-| Question | Answer |
-|----------|--------|
-| Spine locked C3? | ☐ yes · ☐ overturn |
-| World surface = AgentBook revoke/rotate? | ☐ yes · ☐ edit |
-| Fixture = owned AgentBook-shaped stub + paygate? | ☐ yes · ☐ edit |
-| Mutes M1–M4 shame-checked? | ☐ yes · ☐ edit |
-| Ready to build Day 0? | ☐ yes · ☐ hold |
-
-**Hong sign-off:** _______________ · date _______________
+## 8. Confirm
+Spine C3 ☑ · World = sandbox World ID for Agents rebind ☑ · Ready Day1 ☐ (Hong go)
