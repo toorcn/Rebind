@@ -6,6 +6,8 @@ This repo is the **hostile foil** only. It is the “before” shot. An agent ke
 
 Day 1 will deny that key on every grant (mid-loop), and will require a fresh World / AgentBook re-bind before a rotated key can pay. This repo does not do that yet.
 
+Full product spec and the Day 0/1/2 plan: [SPEC.md](SPEC.md) (same text as [C3-SPEC-AND-PLAN.md](C3-SPEC-AND-PLAN.md)). Confirmation slate: [docs/confirmation-slate-c3.md](docs/confirmation-slate-c3.md).
+
 ## What you see
 
 1. Register agent key `K` for a human.

@@ -1,7 +1,7 @@
 # Day 0 completion — C3 revoke theater
 
 Spine: AgentBook revoke / rotate as sign-capability lifecycle.  
-This document covers the foil only.
+This document covers the foil only. The weekend plan is [SPEC.md](SPEC.md).
 
 ## Proved
 
