@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Rebind — source review</title>
+  <style>
+    @page { size: 13.333in 7.5in; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #0e100c; }
+    body { font-family: "Iowan Old Style", Palatino, Georgia, serif; color: #f4f1e8; }
+    .slide {
+      width: 13.333in; height: 7.5in; page-break-after: always; break-after: page;
+      position: relative; overflow: hidden; padding: 0.48in 0.62in 0.58in; background: #12140f;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .slide:last-child { page-break-after: auto; }
+    .kicker {
+      font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; letter-spacing: 0.14em;
+      text-transform: uppercase; color: #b7b2a6; margin: 0 0 10px;
+    }
+    h1 { font-weight: 500; font-size: 52px; line-height: 0.98; letter-spacing: -0.03em; margin: 0; }
+    h2 { font-weight: 500; font-size: 34px; line-height: 1.05; letter-spacing: -0.02em; margin: 0 0 12px; }
+    .sub, p, li { font-family: ui-sans-serif, system-ui, sans-serif; }
+    .sub { margin: 16px 0 0; font-size: 18px; line-height: 1.4; color: #d9d3c5; max-width: 11in; }
+    .row { display: flex; gap: 18px; align-items: flex-start; }
+    img.shot { width: 100%; height: 3.55in; object-fit: cover; object-position: center; background: #0e100c; border: 1px solid #2c3128; }
+    img.card { width: 100%; height: 2.7in; object-fit: cover; object-position: left center; border: 1px solid #2c3128; background: #0e100c; }
+    .cap { margin: 6px 0 0; font-size: 12px; line-height: 1.35; color: #8d887c; }
+    .col { flex: 1; min-width: 0; }
+    ul { margin: 8px 0 0; padding-left: 18px; }
+    li { font-size: 16px; line-height: 1.35; margin: 0 0 8px; color: #f4f1e8; }
+    .foot {
+      position: absolute; left: 0.62in; right: 0.62in; bottom: 0.28in;
+      display: flex; justify-content: space-between;
+      font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: #8d887c;
+    }
+    .src { font-size: 13px; line-height: 1.45; color: #d9d3c5; margin: 0 0 6px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+  </style>
+</head>
+<body>
+  <section class="slide">
+    <p class="kicker">Review deck · cited sources · not the 4-minute talk</p>
+    <h1>What the public sources show, and what we can build from them.</h1>
+    <p class="sub">Visuals are the publishers’ own images: World’s CDN, World developer docs, and GitHub Open Graph cards. Each slide names the URL. No unlicensed Google Image scrape.</p>
+    <div class="foot"><span>Rebind · ETHGlobal Tokyo 2026</span><span>1 / 7</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Source · World, 17 March 2026</p>
+    <h2>AgentKit is proof of human for agents. Their poster also sells a free trial. We do not.</h2>
+    <img class="shot" src="assets/agentkit-announcement.png" alt="Official AgentKit announcement image from world.org" />
+    <p class="cap">world.org/blog/announcements/now-available-agentkit-proof-of-human-for-the-agentic-web · image hosted on world-cdn.worldcoin.org. The essay also describes free trials per unique human. Our slate kills free-trial as the win.</p>
+    <div class="foot"><span>Cited visual</span><span>2 / 7</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Sources · worldcoin/agentkit issues</p>
+    <h2>The contract still has no revoke, and unregister is blocked.</h2>
+    <div class="row">
+      <div class="col">
+        <img class="card" src="assets/gh-issue-37.png" alt="GitHub Open Graph card for agentkit issue 37" />
+        <p class="cap">github.com/worldcoin/agentkit/issues/37 · RFC: re-registration, revocation, and wallet rotation. Opened 18 July 2026. IAgentBook has no revocation operation.</p>
+      </div>
+      <div class="col">
+        <img class="card" src="assets/gh-issue-23.png" alt="GitHub Open Graph card for agentkit issue 23" />
+        <p class="cap">github.com/worldcoin/agentkit/issues/23 · “How to unregister an agent.” Hosted flow returns ALREADY_REGISTERED. Still open.</p>
+      </div>
+    </div>
+    <div class="foot"><span>GitHub Open Graph cards, retrieved 25 Sep 2026</span><span>3 / 7</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Source · worldcoin/world-id-agent-plugin</p>
+    <h2>The hackathon plugin talks only to the sandbox IdP.</h2>
+    <div class="row">
+      <div class="col">
+        <img class="card" src="assets/gh-plugin.png" alt="GitHub card for world-id-agent-plugin" />
+        <p class="cap">github.com/worldcoin/world-id-agent-plugin · README: MCP base is https://sandbox.auth.world.org/mcp. Not staging. Not production.</p>
+      </div>
+      <div class="col">
+        <img class="card" src="assets/docs-meta.png" alt="World developer docs social image" />
+        <p class="cap">docs.world.org/world-id/sandbox/what-is-sandbox · Sandbox World ID app, QR and deep link, proofs that are not production identities. Image: raw.githubusercontent.com/worldcoin/developer-docs docs-meta.png.</p>
+      </div>
+    </div>
+    <div class="foot"><span>Plugin README + World sandbox docs</span><span>4 / 7</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">What we would implement · from the plugin README</p>
+    <h2>Register a sandbox OIDC client, then verify the token on our server.</h2>
+    <ul>
+      <li>Developer scope <code>developer-portal:manage</code> registers the app. Callback must be HTTPS. Localhost is rejected.</li>
+      <li>Client secret stays in server env. It is never sent to the browser and never pasted into chat.</li>
+      <li>Our existing <code>POST /rebind/live/start</code> calls <code>https://sandbox.auth.world.org/api/v1/device_authorization</code>.</li>
+      <li><code>POST /rebind/live/pull</code> checks RS256, issuer, audience, and expiry on the ID token, then stores <code>iss|sub</code>.</li>
+      <li>Denied, expired, or a client “validated” flag never writes that field, so K2 cannot pay.</li>
+    </ul>
+    <p class="cap">Discovery read live: sandbox.auth.world.org/.well-known/openid-configuration · device grant, token endpoint, JWKS, acr orb-v3, pairwise subject.</p>
+    <div class="foot"><span>How the live rebind would land</span><span>5 / 7</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">What we would not build · same sources</p>
+    <h2>The blog’s free trial and AgentBook-as-opcode are the wrong product.</h2>
+    <ul>
+      <li>AgentKit <code>free-trial</code> mode (x402 docs, and the 17 March essay) is a hard no. We do not sell “five free requests.”</li>
+      <li>IDKit human-in-the-loop as app login is a hard no. The protected action stays the paid grant.</li>
+      <li>We do not ship an AgentBook mainnet opcode. Issues #37 and #23 are the reason revoke matters, not a patch we claim to have merged.</li>
+      <li>A Vercel serverless function alone will drop the in-memory registry between calls. Live OIDC also needs one stable HTTPS callback.</li>
+    </ul>
+    <p class="cap">x402 guide: github.com/worldcoin/agentkit/blob/main/x402/DOCS.md · HITL: docs.world.org/agents/human-in-the-loop/integrate</p>
+    <div class="foot"><span>Kept out on purpose</span><span>6 / 7</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Source list</p>
+    <h2>Every visual and claim above.</h2>
+    <p class="src">1. World, “Now available: AgentKit,” 17 March 2026. world.org/blog/announcements/now-available-agentkit-proof-of-human-for-the-agentic-web</p>
+    <p class="src">2. worldcoin/agentkit#37, opened 18 July 2026. github.com/worldcoin/agentkit/issues/37</p>
+    <p class="src">3. worldcoin/agentkit#23, opened 27 April 2026. github.com/worldcoin/agentkit/issues/23</p>
+    <p class="src">4. worldcoin/world-id-agent-plugin README. github.com/worldcoin/world-id-agent-plugin</p>
+    <p class="src">5. World ID sandbox. docs.world.org/world-id/sandbox/what-is-sandbox</p>
+    <p class="src">6. Sandbox IdP discovery. sandbox.auth.world.org/.well-known/openid-configuration</p>
+    <p class="src">7. AgentKit x402 guide. github.com/worldcoin/agentkit/blob/main/x402/DOCS.md</p>
+    <div class="foot"><span>Images retrieved 25 Sep 2026 from the publishers’ CDNs</span><span>7 / 7</span></div>
+  </section>
+</body>
+</html>
