@@ -93,7 +93,7 @@ async function grant(
 }
 
 function line(label: string, value: string): void {
-  console.log(`    ${label.padEnd(12)} ${value}`);
+  console.log(`    ${label.padEnd(14)} ${value}`);
 }
 
 async function main(): Promise<number> {
@@ -167,7 +167,8 @@ async function main(): Promise<number> {
     line("granted", String(after.body.granted === true));
     line("via", String(after.body.via));
     line("revoked", String(after.body.revokedInRegistry === true));
-    line("checked", String(after.body.checkedRevoke === true));
+    line("checkedRevoke", String(after.body.checkedRevoke));
+    console.log("");
 
     const fresh = await grant(base, AGENT_KEY, null);
     console.log("[5] grant after revoke — fresh request, no session cookie");
