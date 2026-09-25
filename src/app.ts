@@ -120,7 +120,8 @@ function renderPage(registry: AgentBookRegistry, grants: GrantLogEntry[]): strin
     p { margin: 0 0 12px; }
     .banner { border: 1px solid #e3b341; background: #2a2416; padding: 12px 14px; margin: 16px 0 28px; }
     h2 { font-size: 1rem; margin: 28px 0 8px; }
-    table { width: 100%; border-collapse: collapse; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 640px; }
     th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #2c3128; vertical-align: top; }
     th { color: #b7b2a6; font-weight: 600; }
     code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
@@ -138,19 +139,23 @@ function renderPage(registry: AgentBookRegistry, grants: GrantLogEntry[]): strin
       That is the bug this fixture is here to show.
     </div>
     <h2>Registry</h2>
+    <div class="table-wrap">
     <table>
       <thead>
         <tr><th>Agent key</th><th>Human</th><th>Status</th><th>Rotated to</th><th>Rotated from</th><th>World re-bind</th></tr>
       </thead>
       <tbody>${agentRows}</tbody>
     </table>
+    </div>
     <h2>Grant log</h2>
+    <div class="table-wrap">
     <table>
       <thead>
         <tr><th>When</th><th>Agent key</th><th>Decision</th><th>Via</th><th>Revoked in registry</th></tr>
       </thead>
       <tbody>${grantRows}</tbody>
     </table>
+    </div>
     <p class="muted">Debug JSON: <code>/debug/registry</code> · <code>/debug/grants</code> · <code>/debug/sessions</code></p>
   </main>
 </body>
