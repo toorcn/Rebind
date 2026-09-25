@@ -19,12 +19,16 @@ app.post("/demo/film", async (_req, res) => {
   }
 });
 
-app.listen(port, host, () => {
-  console.log(foil ? "C3 foil — revoke theater" : "C3 win — revoke enforced");
-  console.log(`http://127.0.0.1:${port}`);
-  console.log(
-    foil
-      ? "Grant path ignores revoke. This process is the foil, on purpose."
-      : "Every grant checks revoke. Rotated keys need a server-validated rebind."
-  );
-});
+export default app;
+
+if (!process.env.VERCEL) {
+  app.listen(port, host, () => {
+    console.log(foil ? "C3 foil — revoke theater" : "C3 win — revoke enforced");
+    console.log(`http://127.0.0.1:${port}`);
+    console.log(
+      foil
+        ? "Grant path ignores revoke. This process is the foil, on purpose."
+        : "Every grant checks revoke. Rotated keys need a server-validated rebind."
+    );
+  });
+}

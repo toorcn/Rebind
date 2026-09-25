@@ -63,6 +63,28 @@ function readCookie(req: Request, name: string): string | null {
   return null;
 }
 
+function redirectUri(req: Request): string {
+  const host = req.get("host");
+  if (!host) return "/rebind/callback";
+  const proto = req.get("x-forwarded-proto") ?? req.protocol;
+  return `${proto}://${host}/rebind/callback`;
+}
+
+function readFilmPage(): string {
+  const candidates = [
+    join(__dirname, "..", "public", "film.html"),
+    join(process.cwd(), "public", "film.html"),
+  ];
+  for (const path of candidates) {
+    try {
+      return readFileSync(path, "utf8");
+    } catch {
+      continue;
+    }
+  }
+  throw new Error("film.html missing");
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -75,7 +97,8 @@ function renderPage(
   registry: AgentBookRegistry,
   grants: GrantLogEntry[],
   mode: PaygateMode,
-  rebinds: RebindRequest[]
+  rebinds: RebindRequest[],
+  redirectUri: string
 ): string {
   const agents = registry.listAll();
   const agentRows =
@@ -155,6 +178,7 @@ function renderPage(
         ? "Foil mode. The registry records revoke. The paygate does not enforce it."
         : "Win mode. Every grant re-reads the registry. A rotated key pays only after the server validates a rebind."
     }</p>
+    <p class="muted">World portal redirect URI: <code>${escapeHtml(redirectUri)}</code></p>
     <div class="banner">
       ${
         mode === "foil"
@@ -162,7 +186,7 @@ function renderPage(
           : "After revoke, the same key is DENIED. K2 stays DENIED until a validated rebind is attached by the server."
       }
     </div>
-    ${mode === "win" ? renderWinForms(rebinds) : ""}
+    ${mode === "win" ? renderWinForms(rebinds, redirectUri) : ""}
     <h2>Registry</h2>
     <div class="table-wrap">
     <table>
@@ -187,7 +211,7 @@ function renderPage(
 </html>`;
 }
 
-function renderWinForms(rebinds: RebindRequest[]): string {
+function renderWinForms(rebinds: RebindRequest[], redirectUri: string): string {
   const latest = rebinds[rebinds.length - 1];
   const latestLine = latest
     ? `<p class="muted">Latest rebind <code>${escapeHtml(latest.id)}</code> for <code>${escapeHtml(latest.agentKey)}</code> is ${escapeHtml(latest.status)}.</p>`
@@ -220,7 +244,7 @@ function renderWinForms(rebinds: RebindRequest[]): string {
       <p>Server finish <input name="requestId" value="${latest ? escapeHtml(latest.id) : ""}" /> <button>Attach if validated</button></p>
     </form>
     <h2>Live World App</h2>
-    <p class="muted">Calls sandbox.auth.world.org. Without <code>WORLD_CLIENT_ID</code> and <code>WORLD_CLIENT_SECRET</code> this returns 501. The device code stays on the server. The portal redirect to register is <code>https://&lt;public-host&gt;/rebind/callback</code>.</p>
+    <p class="muted">Calls sandbox.auth.world.org. Without <code>WORLD_CLIENT_ID</code> and <code>WORLD_CLIENT_SECRET</code> this returns 501. The device code stays on the server. Register this exact redirect: <code>${escapeHtml(redirectUri)}</code></p>
     <form id="live-start">
       <p>Start live rebind for <input name="agentKey" value="K2" /> <button>Start</button></p>
     </form>
@@ -262,12 +286,11 @@ export function createApp(registry: AgentBookRegistry, options: AppOptions = {})
   app.use(express.urlencoded({ extended: false }));
 
   app.get("/", (_req: Request, res: Response) => {
-    const page = readFileSync(join(__dirname, "..", "public", "film.html"), "utf8");
-    res.type("html").send(page);
+    res.type("html").send(readFilmPage());
   });
 
-  app.get("/desk", (_req: Request, res: Response) => {
-    res.type("html").send(renderPage(registry, grants, mode, desk.list()));
+  app.get("/desk", (req: Request, res: Response) => {
+    res.type("html").send(renderPage(registry, grants, mode, desk.list(), redirectUri(req)));
   });
 
   app.get("/rebind/callback", (req: Request, res: Response) => {
