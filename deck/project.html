@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Rebind — the project</title>
+  <style>
+    @page { size: 13.333in 7.5in; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #0e100c; }
+    body { font-family: "Iowan Old Style", Palatino, Georgia, serif; color: #f4f1e8; }
+    .slide {
+      width: 13.333in; height: 7.5in; page-break-after: always; break-after: page;
+      position: relative; overflow: hidden; padding: 0.46in 0.64in 0.52in; background: #12140f;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .slide:last-child { page-break-after: auto; }
+    .kicker {
+      font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; letter-spacing: 0.14em;
+      text-transform: uppercase; color: #b7b2a6; margin: 0 0 12px;
+    }
+    h1 { font-weight: 500; font-size: 46px; line-height: 1.02; letter-spacing: -0.03em; margin: 0; max-width: 12in; }
+    h2 { font-weight: 500; font-size: 34px; line-height: 1.05; letter-spacing: -0.025em; margin: 0 0 14px; max-width: 12in; }
+    p, li, .q, .a { font-family: ui-sans-serif, system-ui, sans-serif; }
+    .lead { margin: 16px 0 0; font-size: 20px; line-height: 1.35; color: #d9d3c5; max-width: 11.2in; }
+    .grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+    .box { width: calc(50% - 6px); background: #181b15; border: 1px solid #2c3128; padding: 12px 14px 10px; }
+    .box h3 { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #e3b341; margin: 0 0 6px; }
+    .box p { margin: 0; font-size: 15px; line-height: 1.35; }
+    .cite { margin: 6px 0 0; font-size: 11px; color: #8d887c; }
+    ul { margin: 8px 0 0; padding-left: 18px; }
+    li { font-size: 18px; line-height: 1.35; margin: 0 0 8px; }
+    .q { font-size: 16px; color: #e3b341; margin: 0 0 2px; }
+    .a { font-size: 16px; line-height: 1.3; margin: 0 0 10px; color: #f4f1e8; }
+    .foot {
+      position: absolute; left: 0.64in; right: 0.64in; bottom: 0.26in;
+      display: flex; justify-content: space-between;
+      font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: #8d887c;
+    }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+    .bad { color: #ff6b6b; }
+    .ok { color: #8fdf7a; }
+  </style>
+</head>
+<body>
+  <section class="slide">
+    <p class="kicker">Our project · Rebind · ETHGlobal Tokyo 2026</p>
+    <h1>A revoked agent key must fail on the next paid request. A new key must not pay until a human re-proves.</h1>
+    <p class="lead">Rebind is that gate. The registry can mark a key revoked or rotated. The paygate re-reads that mark on every grant. World ID for Agents is how the new key earns the right to pay. It is not how a person logs into the app.</p>
+    <div class="foot"><span>Buyer: an integrator who already lets agents pay</span><span>1 / 8</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Why this is a real problem · outside Worldcoin’s issue tracker</p>
+    <h2>Rotation and “revoke” already fail in production systems. The session keeps working.</h2>
+    <div class="grid">
+      <div class="box">
+        <h3>Stolen session, not a stolen key</h3>
+        <p>RelayShield, on the 2026 Claude infostealer mail: rotating a key fixes nothing, because the attacker copied an authenticated session. Changing a password does nothing unless the platform kills existing sessions. Many do not.</p>
+        <p class="cite">blog.relayshield.net/this-is-not-llmjacking-and-rotating-your-key-will-not-fix-it</p>
+      </div>
+      <div class="box">
+        <h3>Both controls, or neither</h3>
+        <p>Obsidian Security: if you force a password reset, the attacker still holds the session token. If you only revoke sessions, stolen credentials log in again. You need rotation and session kill together.</p>
+        <p class="cite">obsidiansecurity.com/blog/credential-theft-vs-token-theft</p>
+      </div>
+      <div class="box">
+        <h3>The standard already says so</h3>
+        <p>OWASP ASVS 5.0 requirement 7.4.1: when termination is triggered, the app must disallow any further use of the session. Stateful sessions are invalidated on the backend. A token that lives until expiry is not terminated.</p>
+        <p class="cite">github.com/OWASP/ASVS/blob/v5.0.0/5.0/en/0x16-V7-Session-Management.md</p>
+      </div>
+      <div class="box">
+        <h3>An agent platform shipped the bug</h3>
+        <p>Flowise, a tool for building agent workflows, CVE-2025-71335, CVSS 8.6. Before 3.0.10, changing the password left existing session tokens valid. CWE-613. The password change did not do the job users thought it did.</p>
+        <p class="cite">vuln.today/cve/CVE-2025-71335 · GHSA-x7rp-qj2h-ghgw</p>
+      </div>
+    </div>
+    <div class="foot"><span>AgentKit issues are a footnote, not the proof</span><span>2 / 8</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Why agents make the same bug sharper</p>
+    <h2>The actor is non-human, keeps calling APIs, and can be copied.</h2>
+    <ul>
+      <li>NHIMG: an agent session must be checked on every request. Expiry alone does not close access. Rotation changes the secret, not the live artefact already issued. They point at OWASP’s Non-Human Identity Top 10 and NIST’s split between authenticators and sessions.</li>
+      <li>Moltbook operators, in public posts, not in a vendor blog: one person registered 41 accounts and farmed karma; X verification is “tissue paper”; “the tools to verify one unique agent simply don’t exist yet.”</li>
+      <li>World’s own AgentKit essay is one more voice in that chorus. It is not the evidence. The same company’s AgentBook issues #37 and #23 only show that this registry, specifically, still has no revoke and no unregister.</li>
+    </ul>
+    <p class="cite">nhimg.org/articles/session-revocation-and-sign-out-everywhere-for-users-and-ai-agents · moltbook.com posts adc58b8f, 61dec01c, 3e40acc4</p>
+    <div class="foot"><span>#37 and #23 explain the registry we sit in front of</span><span>3 / 8</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">What our project is</p>
+    <h2>A paygate that treats revoke as a request-time decision, and rotate as a new human proof.</h2>
+    <ul>
+      <li>Register key K for a human. A signed request for the paid resource is granted.</li>
+      <li>Revoke K. Win mode returns 403 on the open session and on a fresh signature. The cookie from the first lookup is not authority.</li>
+      <li>Rotate K to K2. K2 stays 403 until the server, not the client, records a validated rebind.</li>
+      <li>That rebind is a World ID for Agents journey on sandbox.auth.world.org: request, human completes, server checks the ID token, then the grant.</li>
+      <li>Foil mode is the before shot. It still grants after revoke, on purpose, so the demo can show the bug the standards describe.</li>
+    </ul>
+    <div class="foot"><span>App-layer policy in front of a paid grant</span><span>4 / 8</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">What is already running</p>
+    <h2>Two commands. Opposite results. Same key.</h2>
+    <div class="grid">
+      <div class="box">
+        <h3 class="bad">npm run foil-revoke · exit 0</h3>
+        <p>Registry says K is revoked. The paid grant still returns 200, with the session and without it. Prints <code>REVOKE_INEFFECTIVE</code>. This is the Flowise-shaped hole, filmed on our paygate.</p>
+      </div>
+      <div class="box">
+        <h3 class="ok">npm run win-revoke · exit 0</h3>
+        <p>After revoke, both requests are 403 <code>revoked</code>. K2 is 403 <code>rebind required</code>. A body that says validated does nothing. After the server mints and stores the subject, K2 gets 200. Prints <code>REVOKE_ENFORCED</code> and <code>REBIND_GRANTED</code>.</p>
+      </div>
+    </div>
+    <p class="lead">The win server is the default <code>npm run dev</code>. Foil mode is <code>FOIL_MODE=1</code>. Signatures in the film are a local sha256 stub, so the demo does not pretend to be a wallet.</p>
+    <div class="foot"><span>Checked on this repo, 25 Sep 2026</span><span>5 / 8</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Questions the project has to answer</p>
+    <h2>Short answers.</h2>
+    <p class="q">Is this an on-chain AgentBook fix?</p>
+    <p class="a">No. The registry is our policy list. We do not claim a mainnet opcode.</p>
+    <p class="q">Is World ID the login?</p>
+    <p class="a">No. The protected action is the paid grant after rotate. Denied, expired, or cancelled means K2 still cannot pay.</p>
+    <p class="q">Is the win a free trial?</p>
+    <p class="a">No. AgentKit’s free-trial mode is a different product, and we are not building it.</p>
+    <p class="q">Why would a judge believe the revoke?</p>
+    <p class="a">Because the same signed request that succeeded before revoke fails after it, including the session that was already open. That is ASVS 7.4.1, applied to the agent key.</p>
+    <div class="foot"><span>If a slide cannot answer in one breath, it does not ship</span><span>6 / 8</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">What is still not the live human</p>
+    <h2>The film’s rebind subject is minted by our server. A World App approval is the next wire.</h2>
+    <ul>
+      <li>Discovery on sandbox.auth.world.org is real: device authorization, token endpoint, JWKS, pairwise subject.</li>
+      <li><code>POST /rebind/live/start</code> calls that device endpoint only when <code>WORLD_CLIENT_ID</code> and <code>WORLD_CLIENT_SECRET</code> exist. They do not, in this environment.</li>
+      <li>The hackathon plugin can register that client. Its README refuses HTTP localhost callbacks, so the app needs one stable HTTPS URL first.</li>
+      <li>A plain serverless function would forget the registry between revoke and the next grant. The prototype has to be one process, or a store both requests share.</li>
+    </ul>
+    <div class="foot"><span>Honest limit, not a hidden one</span><span>7 / 8</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">The line to remember</p>
+    <h1>Revoke that does not bind the next request is theater. Rebind is the request-time check, plus a fresh human proof before the new key pays.</h1>
+    <p class="lead">Sources for the problem: RelayShield, Obsidian Security, OWASP ASVS 7.4.1, Flowise CVE-2025-71335, NHIMG on agent sessions, public Moltbook writeups. AgentKit #37 and #23 are the local shape of that same gap, not the reason the gap exists.</p>
+    <div class="foot"><span>Rebind</span><span>8 / 8</span></div>
+  </section>
+</body>
+</html>
