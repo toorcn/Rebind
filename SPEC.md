@@ -98,17 +98,18 @@ Mocks OK if event says proofs are mocked — still run full journey + fail path.
 - [x] `npm run foil-revoke` → REVOKE_INEFFECTIVE
 - [x] SPEC / slate / HANDOFF
 
-### Day 1 — Enforce lifecycle
-- [ ] Grant rejects if revoked (every request)
-- [ ] Rotate without rebind: K2 cannot grant
-- [ ] FOIL_MODE kept for A/B
-- [ ] `npm run win-revoke` + DAY1-COMPLETION
+### Day 1 — Enforce lifecycle ✅
+- [x] Grant rejects if revoked (every request)
+- [x] Rotate without rebind: K2 cannot grant
+- [x] FOIL_MODE kept for A/B
+- [x] `npm run win-revoke` + DAY1-COMPLETION
 
 ### Day 2 — World ID for Agents (track)
-- [ ] Q1–Q6 above
-- [ ] Portal client on sandbox; AgentPlugin if required
-- [ ] INTEGRATION-DEBRIEF.md (Q5)
-- [ ] Mute-World film + 90s cut
+- [x] Journey states + fail path + server-side validation (local IdP double)
+- [x] INTEGRATION-DEBRIEF.md (Q5)
+- [x] Mute-World: a client "validated" claim does not grant
+- [ ] Live portal client on sandbox.auth.world.org (needs WORLD_CLIENT_ID / WORLD_CLIENT_SECRET)
+- [ ] 90s cut
 
 ---
 

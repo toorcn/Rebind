@@ -1,11 +1,13 @@
 {
   "name": "c3-revoke-theater",
   "version": "0.1.0",
-  "description": "ETHGlobal Tokyo 2026 Day 0 foil: AgentBook-shaped revoke theater. Revoke flips a flag; the paygate still grants.",
+  "description": "ETHGlobal Tokyo 2026 C3: revoke is enforced in win mode; the foil still grants after revoke.",
   "private": true,
   "scripts": {
     "dev": "tsx src/server.ts",
+    "dev:foil": "FOIL_MODE=1 tsx src/server.ts",
     "foil-revoke": "tsx src/foil-revoke.ts",
+    "win-revoke": "tsx src/win-revoke.ts",
     "typecheck": "tsc --noEmit"
   },
   "license": "ISC",

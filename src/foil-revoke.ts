@@ -35,7 +35,7 @@ function againstUrl(): string | null {
 
 async function startInProcess(): Promise<{ base: string; close: () => Promise<void> }> {
   const registry = new AgentBookRegistry();
-  const app = createApp(registry);
+  const app = createApp(registry, { mode: "foil" });
   const server: Server = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => {
     server.once("listening", () => resolve());
@@ -239,7 +239,7 @@ async function main(): Promise<number> {
     console.log("ROTATE_NO_REBIND");
     console.log("K2 granted with worldRebind=null. Old key K still granted too.");
     console.log("");
-    console.log("Day 1 will deny K mid-loop after revoke, and will refuse K2 until a World re-bind.");
+    console.log("Win mode denies K after revoke, and refuses K2 until a server-validated rebind.");
     return 0;
   } finally {
     if (hosted) {

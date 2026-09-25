@@ -9,7 +9,7 @@ export interface AgentRecord {
   rotatedFrom: string | null;
   rotatedTo: string | null;
   rotatedAt: number | null;
-  /** Always null on Day 0. Day 1 requires a fresh World/AgentBook proof here. */
+  /** Null until the server validates a rebind. The client cannot set this. */
   worldRebind: string | null;
 }
 
@@ -157,6 +157,33 @@ export class AgentBookRegistry {
       throw new Error("Rotate failed");
     }
     return { oldRecord: updatedOld, newRecord: createdNew };
+  }
+
+  /**
+   * Records a proof the server already validated. Refuses revoked keys and
+   * keys that were not produced by rotate.
+   */
+  attachWorldRebind(agentKey: string, proof: string): AgentRecord {
+    const existing = this.lookup(agentKey);
+    if (!existing) {
+      throw new Error(`Agent key not found: ${agentKey}`);
+    }
+    if (existing.revoked) {
+      throw new Error("Revoked key cannot rebind");
+    }
+    if (!existing.rotatedFrom) {
+      throw new Error("Rebind is only for a rotated-in key");
+    }
+
+    this.db
+      .prepare(`UPDATE agents SET world_rebind = ? WHERE agent_key = ?`)
+      .run(proof, agentKey);
+
+    const updated = this.lookup(agentKey);
+    if (!updated) {
+      throw new Error("Rebind failed");
+    }
+    return updated;
   }
 
   listAll(): AgentRecord[] {

@@ -2,9 +2,9 @@
 
 ETHGlobal Tokyo 2026. Locked spine **C3**: AgentBook revoke / rotate as a signing-key lifecycle.
 
-This repo is the **hostile foil** only. It is the “before” shot. An agent key can be marked revoked in an AgentBook-shaped registry, and the paygate **still grants** the paid resource.
+Default `npm run dev` is **win** mode: a revoked key is denied on every grant, and a rotated key pays only after the server validates a rebind.
 
-Day 1 will deny that key on every grant (mid-loop), and will require a fresh World / AgentBook re-bind before a rotated key can pay. This repo does not do that yet.
+`npm run foil-revoke` still boots the Day 0 theater, where revoke is recorded and the grant still succeeds.
 
 Full product spec and the Day 0/1/2 plan: [SPEC.md](SPEC.md) (same text as [C3-SPEC-AND-PLAN.md](C3-SPEC-AND-PLAN.md)). Confirmation slate: [docs/confirmation-slate-c3.md](docs/confirmation-slate-c3.md).
 
@@ -22,16 +22,19 @@ The script prints `REVOKE_INEFFECTIVE` and `ROTATE_NO_REBIND`, then exits 0. Exi
 
 ```bash
 npm i
+npm run win-revoke
 npm run foil-revoke
 ```
 
-That boots an in-process server, runs the film, and exits.
+`win-revoke` prints `REVOKE_ENFORCED` and `REBIND_GRANTED`. `foil-revoke` prints `REVOKE_INEFFECTIVE`.
 
-Leave a server up for the debug page and for curls:
+Leave a server up:
 
 ```bash
 npm run dev
 ```
+
+Foil server instead: `FOIL_MODE=1 npm run dev` (or `npm run dev:foil`).
 
 [Revoke theater](http://127.0.0.1:43210) — registry table and grant log. The page refreshes every 2 seconds.
 
@@ -52,7 +55,11 @@ npm run foil-revoke -- --against http://127.0.0.1:43210
 | `POST /registry/revoke` | `{ agentKey }` flips the flag |
 | `POST /registry/rotate` | `{ oldKey, newKey }` updates the mapping, `worldRebind` stays null |
 | `GET /api/resource/premium` | `402` challenge (no facilitator) |
-| `POST /api/resource/premium` | signed grant. **Does not enforce revoke or rotate.** |
+| `POST /api/resource/premium` | signed grant. Win mode enforces revoke and rebind. Foil mode does not. |
+| `POST /rebind/start` | start a rebind for a rotated-in key |
+| `POST /rebind/decide` | local IdP outcome: `validated`, `denied`, or `cancelled` |
+| `POST /rebind/finish` | attach `worldRebind` only if the server already validated |
+| `POST /rebind/live/start` | sandbox device grant when client credentials are set |
 | `GET /debug/registry` | all rows |
 | `GET /debug/grants` | grant log |
 | `GET /debug/sessions` | sessions opened at first lookup |
@@ -65,9 +72,9 @@ A grant sends header `X-Agent-Key` plus a body:
 
 The signature is `sha256(agentKey + ":" + message)`. It is a local stub, not a wallet signature and not AgentKit.
 
-The first successful grant sets cookie `agent_session`. Later grants that send the cookie skip the registry (mute M3: check once at session start). A request with no cookie still grants if the key was ever registered.
+Win mode re-reads the registry on every grant. A session cookie does not skip that check. Foil mode still does: the cookie from the first lookup keeps granting, and a fresh request grants if the key was ever registered.
 
-An unknown key is rejected. The gate is not “allow everyone.” It is “allow anyone who was registered once.”
+An unknown key is rejected in both modes.
 
 ## Why this shape
 

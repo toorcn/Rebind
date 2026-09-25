@@ -1,7 +1,16 @@
 import { randomBytes } from "crypto";
 import express, { type Express, type Request, type Response } from "express";
+import { RebindDesk, type RebindRequest } from "./rebind";
 import { AgentBookRegistry, type AgentRecord } from "./registry";
-import { verifyAgentRequest } from "./sign";
+import { signAgentRequest, verifyAgentRequest } from "./sign";
+import { pullValidatedSubject, startDeviceGrant } from "./world-oidc";
+
+export type PaygateMode = "foil" | "win";
+
+export interface AppOptions {
+  mode?: PaygateMode;
+  rebindTtlMs?: number;
+}
 
 const PAID_RESOURCE = "/api/resource/premium";
 const PAID_MESSAGE = `POST ${PAID_RESOURCE}`;
@@ -21,8 +30,8 @@ export interface GrantLogEntry {
   via: "session" | "lookup" | "denied";
   httpStatus: number;
   revokedInRegistry: boolean | null;
-  /** Day 0 foil always leaves this false. The flag is observed, never enforced. */
-  checkedRevoke: false;
+  /** False on the foil path. True when the win path actually read the revoke flag. */
+  checkedRevoke: boolean;
   worldRebind: string | null;
 }
 
@@ -60,7 +69,12 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function renderPage(registry: AgentBookRegistry, grants: GrantLogEntry[]): string {
+function renderPage(
+  registry: AgentBookRegistry,
+  grants: GrantLogEntry[],
+  mode: PaygateMode,
+  rebinds: RebindRequest[]
+): string {
   const agents = registry.listAll();
   const agentRows =
     agents.length === 0
@@ -109,9 +123,8 @@ function renderPage(registry: AgentBookRegistry, grants: GrantLogEntry[]): strin
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>C3 Day 0 — revoke theater</title>
+  <title>${mode === "foil" ? "C3 foil — revoke theater" : "C3 win — revoke enforced"}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="refresh" content="2" />
   <style>
     :root { color-scheme: dark; }
     body { margin: 0; font: 15px/1.45 ui-sans-serif, system-ui, sans-serif; background: #12140f; color: #f4f1e8; }
@@ -132,12 +145,20 @@ function renderPage(registry: AgentBookRegistry, grants: GrantLogEntry[]): strin
 </head>
 <body>
   <main>
-    <h1>Revoke theater</h1>
-    <p class="muted">C3 Day 0 foil. AgentBook-shaped registry. Paygate does not enforce revoke.</p>
+    <h1>${mode === "foil" ? "Revoke theater" : "Revoke enforced"}</h1>
+    <p class="muted">${
+      mode === "foil"
+        ? "Foil mode. The registry records revoke. The paygate does not enforce it."
+        : "Win mode. Every grant re-reads the registry. A rotated key pays only after the server validates a rebind."
+    }</p>
     <div class="banner">
-      Marking a key revoked updates this table. The paid grant still returns GRANTED.
-      That is the bug this fixture is here to show.
+      ${
+        mode === "foil"
+          ? "Marking a key revoked updates this table. The paid grant still returns GRANTED."
+          : "After revoke, the same key is DENIED. K2 stays DENIED until a validated rebind is attached by the server."
+      }
     </div>
+    ${mode === "win" ? renderWinForms(rebinds) : ""}
     <h2>Registry</h2>
     <div class="table-wrap">
     <table>
@@ -162,24 +183,62 @@ function renderPage(registry: AgentBookRegistry, grants: GrantLogEntry[]): strin
 </html>`;
 }
 
-export function createApp(registry: AgentBookRegistry): Express {
+function renderWinForms(rebinds: RebindRequest[]): string {
+  const latest = rebinds[rebinds.length - 1];
+  const latestLine = latest
+    ? `<p class="muted">Latest rebind <code>${escapeHtml(latest.id)}</code> for <code>${escapeHtml(latest.agentKey)}</code> is ${escapeHtml(latest.status)}.</p>`
+    : `<p class="muted">No rebind request yet.</p>`;
+  return `<h2>Drive the win path</h2>
+    <form method="post" action="/registry/register">
+      <p>Register <input name="agentKey" value="K" /> for <input name="humanRef" value="human:demo-operator" /> <button>Register</button></p>
+    </form>
+    <form method="post" action="/registry/revoke">
+      <p>Revoke <input name="agentKey" value="K" /> <button>Revoke</button></p>
+    </form>
+    <form method="post" action="/registry/rotate">
+      <p>Rotate <input name="oldKey" value="K" /> to <input name="newKey" value="K2" /> <button>Rotate</button></p>
+    </form>
+    <form method="post" action="/demo/grant">
+      <p>Signed grant for <input name="agentKey" value="K" /> <button>Grant</button></p>
+    </form>
+    ${latestLine}
+    <form method="post" action="/rebind/start">
+      <p>Start rebind for <input name="agentKey" value="K2" /> <button>Start rebind</button></p>
+    </form>
+    <form method="post" action="/rebind/decide">
+      <p>IdP decision <input name="requestId" value="${latest ? escapeHtml(latest.id) : ""}" />
+        <button name="outcome" value="validated">Validated</button>
+        <button name="outcome" value="denied">Denied</button>
+        <button name="outcome" value="cancelled">Cancelled</button>
+      </p>
+    </form>
+    <form method="post" action="/rebind/finish">
+      <p>Server finish <input name="requestId" value="${latest ? escapeHtml(latest.id) : ""}" /> <button>Attach if validated</button></p>
+    </form>`;
+}
+
+export function createApp(registry: AgentBookRegistry, options: AppOptions = {}): Express {
+  const mode: PaygateMode = options.mode ?? "win";
   const app = express();
   const sessions = new Map<string, Session>();
   const grants: GrantLogEntry[] = [];
+  const desk = new RebindDesk(options.rebindTtlMs ?? 10 * 60 * 1000);
+  const deviceCodes = new Map<string, string>();
 
   app.use(express.json());
+  app.use(express.urlencoded({ extended: false }));
 
   app.get("/", (_req: Request, res: Response) => {
-    res.type("html").send(renderPage(registry, grants));
+    res.type("html").send(renderPage(registry, grants, mode, desk.list()));
   });
 
   app.get("/health", (_req: Request, res: Response) => {
     res.json({
       ok: true,
       spine: "C3",
-      day: 0,
-      foil: "revoke-theater",
-      enforcesRevoke: false,
+      mode,
+      enforcesRevoke: mode === "win",
+      worldIssuer: "https://sandbox.auth.world.org",
     });
   });
 
@@ -192,10 +251,10 @@ export function createApp(registry: AgentBookRegistry): Express {
     }
     try {
       const record = registry.register(agentKey, humanRef);
-      res.status(201).json({ record });
+      reply(req, res, 201, { record });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Register failed";
-      res.status(409).json({ error: message });
+      reply(req, res, 409, { error: message });
     }
   });
 
@@ -221,7 +280,13 @@ export function createApp(registry: AgentBookRegistry): Express {
     }
     try {
       const record = registry.revoke(agentKey);
-      res.json({ record, note: "Flag flipped. Day 0 paygate does not read it." });
+      reply(req, res, 200, {
+        record,
+        note:
+          mode === "foil"
+            ? "Flag flipped. Foil paygate does not read it."
+            : "Flag flipped. The next grant will deny this key.",
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Revoke failed";
       res.status(404).json({ error: message });
@@ -237,9 +302,12 @@ export function createApp(registry: AgentBookRegistry): Express {
     }
     try {
       const result = registry.rotate(oldKey, newKey);
-      res.json({
+      reply(req, res, 200, {
         ...result,
-        note: "Mapping updated. No World re-bind. Day 0 paygate still accepts both keys.",
+        note:
+          mode === "foil"
+            ? "Mapping updated. No World re-bind. Foil paygate still accepts both keys."
+            : "Mapping updated. K2 cannot grant until the server attaches a validated rebind.",
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Rotate failed";
@@ -264,18 +332,153 @@ export function createApp(registry: AgentBookRegistry): Express {
     });
   });
 
+  app.get("/debug/rebinds", (_req: Request, res: Response) => {
+    const requests = desk.list();
+    res.json({ requests, count: requests.length });
+  });
+
+  app.post("/rebind/start", (req: Request, res: Response) => {
+    const agentKey = readString(req.body?.agentKey);
+    if (!agentKey) {
+      reply(req, res, 400, { error: "agentKey is required" });
+      return;
+    }
+    const record = registry.lookup(agentKey);
+    if (!record) {
+      reply(req, res, 404, { error: "Agent key not found" });
+      return;
+    }
+    if (!record.rotatedFrom) {
+      reply(req, res, 409, { error: "Rebind is only for a rotated-in key" });
+      return;
+    }
+    const request = desk.start(agentKey);
+    reply(req, res, 201, { request, issuer: request.issuer });
+  });
+
+  app.post("/rebind/decide", (req: Request, res: Response) => {
+    const requestId = readString(req.body?.requestId);
+    const outcome = readString(req.body?.outcome);
+    if (!requestId || (outcome !== "validated" && outcome !== "denied" && outcome !== "cancelled")) {
+      reply(req, res, 400, { error: "requestId and outcome (validated|denied|cancelled) are required" });
+      return;
+    }
+    try {
+      const request = desk.decide(requestId, outcome);
+      reply(req, res, 200, { request });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Decide failed";
+      reply(req, res, 404, { error: message });
+    }
+  });
+
+  app.post("/rebind/finish", (req: Request, res: Response) => {
+    const requestId = readString(req.body?.requestId);
+    if (!requestId) {
+      reply(req, res, 400, { error: "requestId is required" });
+      return;
+    }
+    const request = desk.get(requestId);
+    if (!request) {
+      reply(req, res, 404, { error: "Rebind request not found" });
+      return;
+    }
+    if (request.status !== "validated" || !request.subject) {
+      reply(req, res, 403, {
+        attached: false,
+        status: request.status,
+        error: "Rebind is not validated. A client claim is not accepted.",
+      });
+      return;
+    }
+    try {
+      const record = registry.attachWorldRebind(
+        request.agentKey,
+        `${request.issuer}|${request.subject}`
+      );
+      reply(req, res, 200, { attached: true, record });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Finish failed";
+      reply(req, res, 409, { attached: false, error: message });
+    }
+  });
+
+  app.post("/rebind/live/start", async (req: Request, res: Response) => {
+    const agentKey = readString(req.body?.agentKey);
+    if (!agentKey) {
+      res.status(400).json({ error: "agentKey is required" });
+      return;
+    }
+    const record = registry.lookup(agentKey);
+    if (!record?.rotatedFrom) {
+      res.status(409).json({ error: "Rebind is only for a rotated-in key" });
+      return;
+    }
+    try {
+      const live = await startDeviceGrant();
+      if (!live) {
+        res.status(501).json({
+          error: "Set WORLD_CLIENT_ID and WORLD_CLIENT_SECRET to start sandbox.auth.world.org",
+        });
+        return;
+      }
+      const request = desk.start(agentKey);
+      deviceCodes.set(request.id, live.deviceCode);
+      res.status(201).json({
+        requestId: request.id,
+        userCode: live.userCode,
+        verificationUri: live.verificationUri,
+        verificationUriComplete: live.verificationUriComplete,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Live rebind failed";
+      res.status(502).json({ error: message });
+    }
+  });
+
+  app.post("/rebind/live/pull", async (req: Request, res: Response) => {
+    const requestId = readString(req.body?.requestId);
+    if (!requestId) {
+      res.status(400).json({ error: "requestId is required" });
+      return;
+    }
+    const deviceCode = deviceCodes.get(requestId);
+    if (!deviceCode) {
+      res.status(404).json({ error: "No live device grant for this request" });
+      return;
+    }
+    const subject = await pullValidatedSubject(deviceCode);
+    if (!subject) {
+      res.status(202).json({ attached: false, status: "pending" });
+      return;
+    }
+    const request = desk.markValidated(requestId, subject, "https://sandbox.auth.world.org");
+    const record = registry.attachWorldRebind(request.agentKey, `${request.issuer}|${subject}`);
+    res.json({ attached: true, record });
+  });
+
+  app.post("/demo/grant", (req: Request, res: Response) => {
+    const agentKey = readString(req.body?.agentKey);
+    if (!agentKey) {
+      reply(req, res, 400, { error: "agentKey is required" });
+      return;
+    }
+    const signature = signAgentRequest(agentKey, PAID_MESSAGE);
+    grantPaidResource(req, res, registry, sessions, grants, mode, agentKey, signature);
+  });
+
   app.get(PAID_RESOURCE, (_req: Request, res: Response) => {
     res.status(402).json({
       error: "payment_required",
       resource: PAID_RESOURCE,
       accepts: ["agent-signed-request"],
       message: PAID_MESSAGE,
-      note: "Day 0 paygate stub. No x402 facilitator and no World ID check.",
+      note: "Paid resource. Send a signed agent key. Win mode also enforces revoke and rebind.",
     });
   });
 
   app.post(PAID_RESOURCE, (req: Request, res: Response) => {
-    grantPaidResource(req, res, registry, sessions, grants);
+    grantPaidResource(req, res, registry, sessions, grants, mode);
   });
 
   return app;
@@ -290,21 +493,35 @@ export function createApp(registry: AgentBookRegistry): Express {
  *
  * Day 1 replaces this decision with a mid-loop deny and a World re-bind gate.
  */
+function reply(req: Request, res: Response, status: number, body: unknown): void {
+  const type = req.header("content-type") ?? "";
+  if (type.includes("application/json")) {
+    res.status(status).json(body);
+    return;
+  }
+  res.redirect("/");
+}
+
 function grantPaidResource(
   req: Request,
   res: Response,
   registry: AgentBookRegistry,
   sessions: Map<string, Session>,
-  grants: GrantLogEntry[]
+  grants: GrantLogEntry[],
+  mode: PaygateMode,
+  signedKey?: string,
+  signedValue?: string
 ): void {
   const body: GrantBody =
     typeof req.body === "object" && req.body !== null ? (req.body as GrantBody) : {};
 
   const agentKey =
-    readString(req.header("x-agent-key")) ?? readString(body.agentKey);
+    signedKey ?? readString(req.header("x-agent-key")) ?? readString(body.agentKey);
   const message = readString(body.message) ?? PAID_MESSAGE;
   const signature =
-    readString(req.header("x-agent-signature")) ?? readString(body.signature);
+    signedValue ??
+    readString(req.header("x-agent-signature")) ??
+    readString(body.signature);
 
   if (!agentKey || !signature) {
     deny(res, grants, agentKey ?? "(missing)", 400, "missing agentKey or signature");
@@ -318,6 +535,12 @@ function grantPaidResource(
 
   const sessionId = readCookie(req, "agent_session");
   const session = sessionId ? sessions.get(sessionId) : undefined;
+  const record = registry.lookup(agentKey);
+
+  if (mode === "win") {
+    grantWin(res, grants, sessions, agentKey, record);
+    return;
+  }
 
   // Mute M3: a session opened at first lookup is trusted for the rest of the loop.
   if (session && session.agentKey === agentKey) {
@@ -333,7 +556,6 @@ function grantPaidResource(
     return;
   }
 
-  const record = registry.lookup(agentKey);
   if (!record) {
     deny(res, grants, agentKey, 403, "agent key is not registered");
     return;
@@ -348,6 +570,42 @@ function grantPaidResource(
     revokedInRegistry: record.revoked,
     worldRebind: record.worldRebind,
     sessionId: opened.id,
+  });
+}
+
+function grantWin(
+  res: Response,
+  grants: GrantLogEntry[],
+  sessions: Map<string, Session>,
+  agentKey: string,
+  record: AgentRecord | null
+): void {
+  if (!record) {
+    deny(res, grants, agentKey, 403, "agent key is not registered", true, null);
+    return;
+  }
+  if (record.revoked) {
+    deny(res, grants, agentKey, 403, "revoked", true, true);
+    return;
+  }
+  if (record.rotatedTo) {
+    deny(res, grants, agentKey, 403, "rotated away", true, false);
+    return;
+  }
+  if (record.rotatedFrom && !record.worldRebind) {
+    deny(res, grants, agentKey, 403, "rebind required", true, false);
+    return;
+  }
+
+  const opened = openSession(sessions, record);
+  allow(res, grants, {
+    agentKey,
+    humanRef: record.humanRef,
+    via: "lookup",
+    revokedInRegistry: false,
+    worldRebind: record.worldRebind,
+    sessionId: opened.id,
+    checkedRevoke: true,
   });
 }
 
@@ -372,8 +630,10 @@ function allow(
     revokedInRegistry: boolean | null;
     worldRebind: string | null;
     sessionId: string;
+    checkedRevoke?: boolean;
   }
 ): void {
+  const checkedRevoke = details.checkedRevoke ?? false;
   grants.push({
     at: Date.now(),
     agentKey: details.agentKey,
@@ -382,7 +642,7 @@ function allow(
     via: details.via,
     httpStatus: 200,
     revokedInRegistry: details.revokedInRegistry,
-    checkedRevoke: false,
+    checkedRevoke,
     worldRebind: details.worldRebind,
   });
 
@@ -395,7 +655,7 @@ function allow(
       humanRef: details.humanRef,
       via: details.via,
       revokedInRegistry: details.revokedInRegistry,
-      checkedRevoke: false,
+      checkedRevoke,
       worldRebind: details.worldRebind,
       foil: details.revokedInRegistry ? "REVOKE_IGNORED" : "GRANTED",
     });
@@ -406,7 +666,9 @@ function deny(
   grants: GrantLogEntry[],
   agentKey: string,
   status: number,
-  error: string
+  error: string,
+  checkedRevoke = false,
+  revokedInRegistry: boolean | null = null
 ): void {
   grants.push({
     at: Date.now(),
@@ -415,9 +677,9 @@ function deny(
     granted: false,
     via: "denied",
     httpStatus: status,
-    revokedInRegistry: null,
-    checkedRevoke: false,
+    revokedInRegistry,
+    checkedRevoke,
     worldRebind: null,
   });
-  res.status(status).json({ granted: false, error });
+  res.status(status).json({ granted: false, error, checkedRevoke, revokedInRegistry });
 }
