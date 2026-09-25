@@ -28,6 +28,12 @@ npm run foil-revoke
 
 `win-revoke` prints `REVOKE_ENFORCED` and `REBIND_GRANTED`. `foil-revoke` prints `REVOKE_INEFFECTIVE`.
 
+The 90-second cut runs the foil hole and the win path, including denied, cancelled, and expired rebind:
+
+```bash
+npm run film
+```
+
 Leave a server up:
 
 ```bash
@@ -36,7 +42,7 @@ npm run dev
 
 Foil server instead: `FOIL_MODE=1 npm run dev` (or `npm run dev:foil`).
 
-[Revoke theater](http://127.0.0.1:43210) — registry table and grant log. The page refreshes every 2 seconds.
+[90-second cut](http://127.0.0.1:43210) plays the film in the browser. [Operator desk](http://127.0.0.1:43210/desk) is the registry table and the hand-driven forms.
 
 Drive that server instead of an in-process one:
 

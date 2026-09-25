@@ -8,6 +8,7 @@
     "dev:foil": "FOIL_MODE=1 tsx src/server.ts",
     "foil-revoke": "tsx src/foil-revoke.ts",
     "win-revoke": "tsx src/win-revoke.ts",
+    "film": "tsx src/film.ts",
     "typecheck": "tsc --noEmit"
   },
   "license": "ISC",

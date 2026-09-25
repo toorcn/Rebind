@@ -1,4 +1,6 @@
 import { randomBytes } from "crypto";
+import { readFileSync } from "fs";
+import { join } from "path";
 import express, { type Express, type Request, type Response } from "express";
 import { RebindDesk, type RebindRequest } from "./rebind";
 import { AgentBookRegistry, type AgentRecord } from "./registry";
@@ -137,10 +139,12 @@ function renderPage(
     table { width: 100%; border-collapse: collapse; min-width: 640px; }
     th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #2c3128; vertical-align: top; }
     th { color: #b7b2a6; font-weight: 600; }
-    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    pre { white-space: pre-wrap; background: #181b15; padding: 12px; border: 1px solid #2c3128; }
     .ok { color: #8fdf7a; font-weight: 700; }
     .bad { color: #ff6b6b; font-weight: 700; }
     .muted { color: #b7b2a6; }
+    a { color: #e3b341; }
   </style>
 </head>
 <body>
@@ -177,7 +181,7 @@ function renderPage(
       <tbody>${grantRows}</tbody>
     </table>
     </div>
-    <p class="muted">Debug JSON: <code>/debug/registry</code> · <code>/debug/grants</code> · <code>/debug/sessions</code></p>
+    <p class="muted"><a href="/">90-second cut</a> · Debug JSON: <code>/debug/registry</code> · <code>/debug/grants</code> · <code>/debug/sessions</code></p>
   </main>
 </body>
 </html>`;
@@ -214,7 +218,36 @@ function renderWinForms(rebinds: RebindRequest[]): string {
     </form>
     <form method="post" action="/rebind/finish">
       <p>Server finish <input name="requestId" value="${latest ? escapeHtml(latest.id) : ""}" /> <button>Attach if validated</button></p>
-    </form>`;
+    </form>
+    <h2>Live World App</h2>
+    <p class="muted">Calls sandbox.auth.world.org. Without <code>WORLD_CLIENT_ID</code> and <code>WORLD_CLIENT_SECRET</code> this returns 501. The device code stays on the server.</p>
+    <form id="live-start">
+      <p>Start live rebind for <input name="agentKey" value="K2" /> <button>Start</button></p>
+    </form>
+    <form id="live-pull">
+      <p>Pull <input name="requestId" placeholder="request id" /> <button>Pull</button></p>
+    </form>
+    <pre id="live-out">Not started.</pre>
+    <script>
+      async function live(path, body, event) {
+        event.preventDefault();
+        const response = await fetch(path, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const payload = await response.json();
+        document.getElementById("live-out").textContent = response.status + "\\n" + JSON.stringify(payload, null, 2);
+      }
+      document.getElementById("live-start").addEventListener("submit", (event) => {
+        const agentKey = new FormData(event.target).get("agentKey");
+        live("/rebind/live/start", { agentKey }, event);
+      });
+      document.getElementById("live-pull").addEventListener("submit", (event) => {
+        const requestId = new FormData(event.target).get("requestId");
+        live("/rebind/live/pull", { requestId }, event);
+      });
+    </script>`;
 }
 
 export function createApp(registry: AgentBookRegistry, options: AppOptions = {}): Express {
@@ -229,6 +262,11 @@ export function createApp(registry: AgentBookRegistry, options: AppOptions = {})
   app.use(express.urlencoded({ extended: false }));
 
   app.get("/", (_req: Request, res: Response) => {
+    const page = readFileSync(join(__dirname, "..", "public", "film.html"), "utf8");
+    res.type("html").send(page);
+  });
+
+  app.get("/desk", (_req: Request, res: Response) => {
     res.type("html").send(renderPage(registry, grants, mode, desk.list()));
   });
 
@@ -499,7 +537,7 @@ function reply(req: Request, res: Response, status: number, body: unknown): void
     res.status(status).json(body);
     return;
   }
-  res.redirect("/");
+  res.redirect("/desk");
 }
 
 function grantPaidResource(

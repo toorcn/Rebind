@@ -109,7 +109,7 @@ Mocks OK if event says proofs are mocked — still run full journey + fail path.
 - [x] INTEGRATION-DEBRIEF.md (Q5)
 - [x] Mute-World: a client "validated" claim does not grant
 - [ ] Live portal client on sandbox.auth.world.org (needs WORLD_CLIENT_ID / WORLD_CLIENT_SECRET)
-- [ ] 90s cut
+- [x] 90s cut (`npm run film` and the page at `/`)
 
 ---
 

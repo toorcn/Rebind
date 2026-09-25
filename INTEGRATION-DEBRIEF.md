@@ -13,7 +13,7 @@ Track: Best Use of World ID for Agents. Issuer we target: `https://sandbox.auth.
 
 ## Time to first success
 
-The local journey (start → decide validated → finish → grant) succeeds in one `npm run win-revoke` run, under a second, with no portal client.
+The local journey (start → decide validated → finish → grant) succeeds in one `npm run win-revoke` run, under a second, with no portal client. `npm run film` is the 90-second cut: foil still grants, win denies, and denied, cancelled, and expired rebinds do not grant.
 
 A live sandbox round trip is not done in this environment. There is no registered OIDC client here, so device authorization cannot complete in World App.
 

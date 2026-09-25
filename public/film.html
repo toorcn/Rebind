@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rebind — 90-second cut</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 16px/1.45 ui-sans-serif, system-ui, sans-serif;
+      background: #12140f;
+      color: #f4f1e8;
+    }
+    main { max-width: 880px; margin: 0 auto; padding: 28px 20px 72px; }
+    .kicker {
+      margin: 0 0 8px;
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #b7b2a6;
+    }
+    h1 {
+      margin: 0;
+      font-family: Palatino, Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(1.7rem, 4vw, 2.4rem);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+    }
+    .lead { margin: 14px 0 0; color: #d9d3c5; max-width: 40rem; }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 22px; }
+    button {
+      font: inherit;
+      background: #e3b341;
+      color: #12140f;
+      border: 0;
+      padding: 10px 16px;
+      cursor: pointer;
+    }
+    button.ghost { background: transparent; color: #f4f1e8; border: 1px solid #3a4034; }
+    button:disabled { opacity: 0.55; cursor: wait; }
+    .clock { font-variant-numeric: tabular-nums; color: #b7b2a6; }
+    .stage {
+      margin-top: 22px;
+      border: 1px solid #2c3128;
+      background: #181b15;
+      padding: 18px 18px 14px;
+      min-height: 180px;
+    }
+    .stamp {
+      display: inline-block;
+      margin: 0 0 8px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+    .stamp.pass { color: #8fdf7a; }
+    .stamp.hole { color: #ff6b6b; }
+    .stamp.wait { color: #e3b341; }
+    h2 { margin: 0 0 8px; font-size: 1.25rem; font-weight: 600; }
+    .lines { margin: 12px 0 0; padding: 0; list-style: none; }
+    .lines li { display: flex; gap: 12px; padding: 4px 0; border-top: 1px solid #2c3128; }
+    .lines span { color: #b7b2a6; min-width: 8.5rem; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+    ol { margin: 22px 0 0; padding: 0; list-style: none; }
+    ol li {
+      display: grid;
+      grid-template-columns: 1.6rem 1fr;
+      gap: 8px;
+      padding: 8px 0;
+      border-top: 1px solid #2c3128;
+      color: #8d887c;
+    }
+    ol li.on { color: #f4f1e8; }
+    ol li.done { color: #d9d3c5; }
+    .note { margin-top: 18px; color: #b7b2a6; }
+    a { color: #e3b341; }
+    .err { color: #ff6b6b; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="kicker">Rebind · ETHGlobal Tokyo 2026</p>
+    <h1>A revoked agent key fails on the next paid request. A new key waits for a human proof.</h1>
+    <p class="lead" id="lead">Seven beats. The paygate runs them for real: foil still grants after revoke, win denies, and a client that claims “validated” does not get the resource.</p>
+    <div class="row">
+      <button id="play" type="button">Play the 90-second cut</button>
+      <button id="skip" class="ghost" type="button" hidden>Show the result</button>
+      <span class="clock" id="clock">0:00 / 1:30</span>
+    </div>
+    <section class="stage" id="stage" aria-live="polite">
+      <p class="stamp wait">READY</p>
+      <h2>The cut is the product.</h2>
+      <p>Press play. The server registers K, revokes it, rotates to a new key, and refuses to treat a client claim as a World proof.</p>
+    </section>
+    <ol id="rail"></ol>
+    <p class="note" id="note">Operator desk, if you want to drive one key by hand: <a href="/desk">/desk</a>.</p>
+  </main>
+  <script>
+    const play = document.getElementById("play");
+    const skip = document.getElementById("skip");
+    const clock = document.getElementById("clock");
+    const stage = document.getElementById("stage");
+    const rail = document.getElementById("rail");
+    const note = document.getElementById("note");
+    const TOTAL = 90;
+    const HOLDS = [8, 11, 11, 12, 12, 13, 12, 11];
+    let film = null;
+    let timer = null;
+    let elapsed = 0;
+    let shown = -1;
+
+    function fmt(seconds) {
+      const s = Math.min(TOTAL, Math.max(0, Math.floor(seconds)));
+      return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+    }
+
+    function stampClass(stamp) {
+      if (stamp === "REVOKE_INEFFECTIVE") return "hole";
+      return "pass";
+    }
+
+    function renderBeat(item) {
+      const rows = item.lines
+        .map((row) => "<li><span>" + row.label + "</span><code>" + row.value + "</code></li>")
+        .join("");
+      stage.innerHTML =
+        '<p class="stamp ' + stampClass(item.stamp) + '">' + item.stamp + "</p>" +
+        "<h2>" + item.n + ". " + item.title + "</h2>" +
+        "<p>" + item.judgeSees + "</p>" +
+        '<ul class="lines">' + rows + "</ul>";
+      for (const li of rail.querySelectorAll("li")) {
+        const n = Number(li.dataset.n);
+        li.className = n === item.n ? "on" : n < item.n ? "done" : "";
+      }
+    }
+
+    function renderIntro() {
+      stage.innerHTML =
+        '<p class="stamp wait">0:00</p>' +
+        "<h2>What you are about to see is the paygate, not a slide.</h2>" +
+        "<p>Foil mode records revoke and still grants. Win mode re-reads the registry on every request. The new key pays only after the server validates a rebind.</p>";
+    }
+
+    function indexFor(seconds) {
+      let cursor = 0;
+      for (let i = 0; i < HOLDS.length; i++) {
+        cursor += HOLDS[i];
+        if (seconds < cursor) return i - 1;
+      }
+      return 6;
+    }
+
+    function stop() {
+      if (timer) clearInterval(timer);
+      timer = null;
+    }
+
+    function tick() {
+      elapsed += 0.25;
+      clock.textContent = fmt(elapsed) + " / 1:30";
+      const index = indexFor(elapsed);
+      if (index !== shown) {
+        shown = index;
+        if (index < 0) renderIntro();
+        else if (film) renderBeat(film.beats[index]);
+      }
+      if (elapsed >= TOTAL) {
+        stop();
+        clock.textContent = "1:30 / 1:30";
+        if (film) renderBeat(film.beats[film.beats.length - 1]);
+      }
+    }
+
+    function startClock() {
+      elapsed = 0;
+      shown = -2;
+      renderIntro();
+      clock.textContent = "0:00 / 1:30";
+      stop();
+      timer = setInterval(tick, 250);
+      tick();
+    }
+
+    play.addEventListener("click", async () => {
+      play.disabled = true;
+      play.textContent = "Running the paygate…";
+      stage.innerHTML = '<p class="stamp wait">RUNNING</p><h2>Register, revoke, rotate, rebind.</h2><p>This takes about two seconds. The expired-rebind beat waits out a real TTL.</p>';
+      try {
+        const response = await fetch("/demo/film", { method: "POST" });
+        const body = await response.json();
+        if (!response.ok || !body.beats) {
+          throw new Error(body.error || "Film failed");
+        }
+        film = body;
+        rail.innerHTML = film.beats
+          .map((item) => '<li data-n="' + item.n + '"><span>' + item.n + '</span><span>' + item.title + "</span></li>")
+          .join("");
+        note.textContent = film.note + " ";
+        const desk = document.createElement("a");
+        desk.href = "/desk";
+        desk.textContent = "Operator desk";
+        note.appendChild(desk);
+        skip.hidden = false;
+        play.hidden = true;
+        if (!film.passed) {
+          const failed = film.beats.find((item) => !item.passed) || film.beats[0];
+          clock.textContent = "1:30 / 1:30";
+          renderBeat(failed);
+          stage.insertAdjacentHTML("afterbegin", '<p class="err">A beat failed. The cut did not pass.</p>');
+          return;
+        }
+        startClock();
+      } catch (error) {
+        play.disabled = false;
+        play.textContent = "Play the 90-second cut";
+        stage.innerHTML = '<p class="stamp hole">ERROR</p><h2>The cut did not run.</h2><p class="err">' + (error instanceof Error ? error.message : "Film failed") + "</p>";
+      }
+    });
+
+    skip.addEventListener("click", () => {
+      if (!film) return;
+      stop();
+      elapsed = TOTAL;
+      clock.textContent = "1:30 / 1:30";
+      for (const li of rail.querySelectorAll("li")) li.className = "done";
+      renderBeat(film.beats[film.beats.length - 1]);
+    });
+  </script>
+</body>
+</html>

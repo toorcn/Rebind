@@ -1,4 +1,5 @@
 import { createApp } from "./app";
+import { runFilm } from "./film-run";
 import { AgentBookRegistry } from "./registry";
 
 const port = Number(process.env.PORT ?? "43210");
@@ -7,6 +8,16 @@ const host = process.env.HOST ?? "0.0.0.0";
 const foil = process.env.FOIL_MODE === "1";
 const registry = new AgentBookRegistry();
 const app = createApp(registry, { mode: foil ? "foil" : "win" });
+
+app.post("/demo/film", async (_req, res) => {
+  try {
+    const film = await runFilm();
+    res.status(film.passed ? 200 : 500).json(film);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Film failed";
+    res.status(500).json({ passed: false, error: message });
+  }
+});
 
 app.listen(port, host, () => {
   console.log(foil ? "C3 foil — revoke theater" : "C3 win — revoke enforced");
