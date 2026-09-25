@@ -1,0 +1,23 @@
+{
+  "name": "c3-revoke-theater",
+  "version": "0.1.0",
+  "description": "ETHGlobal Tokyo 2026 Day 0 foil: AgentBook-shaped revoke theater. Revoke flips a flag; the paygate still grants.",
+  "private": true,
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "foil-revoke": "tsx src/foil-revoke.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
