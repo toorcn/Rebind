@@ -39,7 +39,7 @@ Drive that server instead of an in-process one:
 npm run foil-revoke -- --against http://127.0.0.1:43210
 ```
 
-`PORT` overrides `43210`. The registry is in-memory and resets when the process exits.
+`PORT` overrides `43210`. The registry is in-memory and resets when the process exits. Run the film once per process: a second `--against` the same server fails because `K` is already registered. Restart `npm run dev` between takes.
 
 ## API
 

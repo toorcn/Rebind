@@ -23,6 +23,8 @@ The paygate grant path does not:
 
 Debug surfaces for the film: `GET /`, `GET /debug/registry`, `GET /debug/grants`, `GET /debug/sessions`.
 
+Restart the dev server between film takes. The script registers key `K`, and a second run against the same process gets HTTP 409.
+
 ## Honest scope
 
 App-layer stub shaped like the AgentBook gap. Cite [agentkit#37](https://github.com/worldcoin/agentkit/issues/37) and [agentkit#23](https://github.com/worldcoin/agentkit/issues/23). No mainnet opcode. No claim that AgentBook was patched. No World ID / IDKit / AgentKit RPC. Signatures are a sha256 stub.
