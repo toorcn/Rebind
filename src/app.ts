@@ -220,7 +220,7 @@ function renderWinForms(rebinds: RebindRequest[]): string {
       <p>Server finish <input name="requestId" value="${latest ? escapeHtml(latest.id) : ""}" /> <button>Attach if validated</button></p>
     </form>
     <h2>Live World App</h2>
-    <p class="muted">Calls sandbox.auth.world.org. Without <code>WORLD_CLIENT_ID</code> and <code>WORLD_CLIENT_SECRET</code> this returns 501. The device code stays on the server.</p>
+    <p class="muted">Calls sandbox.auth.world.org. Without <code>WORLD_CLIENT_ID</code> and <code>WORLD_CLIENT_SECRET</code> this returns 501. The device code stays on the server. The portal redirect to register is <code>https://&lt;public-host&gt;/rebind/callback</code>.</p>
     <form id="live-start">
       <p>Start live rebind for <input name="agentKey" value="K2" /> <button>Start</button></p>
     </form>
@@ -268,6 +268,18 @@ export function createApp(registry: AgentBookRegistry, options: AppOptions = {})
 
   app.get("/desk", (_req: Request, res: Response) => {
     res.type("html").send(renderPage(registry, grants, mode, desk.list()));
+  });
+
+  app.get("/rebind/callback", (req: Request, res: Response) => {
+    const hasCode = typeof req.query.code === "string";
+    res.type("html").send(`<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8" /><title>Rebind callback</title></head>
+<body>
+  <p>This is the registered World redirect. The live rebind uses the device grant, so the human approves on World’s verification page and this URL is not where the proof returns.</p>
+  <p>${hasCode ? "An authorization code arrived. This demo does not exchange it." : "No authorization code on this request."}</p>
+</body>
+</html>`);
   });
 
   app.get("/health", (_req: Request, res: Response) => {
