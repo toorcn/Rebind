@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Rebind — 4 minute demo</title>
+  <style>
+    @page { size: 13.333in 7.5in; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #0e100c; }
+    body { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; color: #f4f1e8; }
+    .slide {
+      width: 13.333in;
+      height: 7.5in;
+      page-break-after: always;
+      break-after: page;
+      position: relative;
+      overflow: hidden;
+      padding: 0.62in 0.78in 0.7in;
+      background: #12140f;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .slide:last-child { page-break-after: auto; }
+    .kicker {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #b7b2a6;
+      margin: 0 0 18px;
+    }
+    h1 {
+      font-weight: 500;
+      font-size: 68px;
+      line-height: 0.96;
+      letter-spacing: -0.03em;
+      margin: 0;
+      max-width: 11in;
+    }
+    h2 {
+      font-weight: 500;
+      font-size: 46px;
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+      margin: 0 0 22px;
+      max-width: 11.2in;
+    }
+    .sub {
+      margin-top: 28px;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 22px;
+      line-height: 1.4;
+      color: #d9d3c5;
+      max-width: 9.2in;
+    }
+    .foot {
+      position: absolute;
+      left: 0.78in;
+      right: 0.78in;
+      bottom: 0.38in;
+      display: flex;
+      justify-content: space-between;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 13px;
+      color: #8d887c;
+    }
+    .row { display: flex; gap: 28px; margin-top: 8px; }
+    .card {
+      flex: 1;
+      border: 1px solid #2c3128;
+      background: #181b15;
+      padding: 22px 24px 20px;
+      min-height: 3.5in;
+    }
+    .card h3 {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 14px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin: 0 0 14px;
+      color: #b7b2a6;
+    }
+    .card p { margin: 0 0 12px; font-size: 26px; line-height: 1.25; }
+    .ok { color: #8fdf7a; }
+    .bad { color: #ff6b6b; }
+    .gold { color: #e3b341; }
+    code, .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.86em;
+    }
+    ol { margin: 8px 0 0; padding: 0; list-style: none; }
+    ol li {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 26px;
+      line-height: 1.35;
+      margin: 0 0 14px;
+      color: #f4f1e8;
+    }
+    ol span {
+      display: inline-block;
+      width: 36px;
+      color: #e3b341;
+      font-variant-numeric: tabular-nums;
+    }
+    .cite {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 20px;
+      line-height: 1.45;
+      color: #d9d3c5;
+      margin: 0 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <section class="slide">
+    <p class="kicker">ETHGlobal Tokyo 2026 · World ID for Agents</p>
+    <h1>Compromised agent keys keep paying.</h1>
+    <p class="sub">Rebind makes revoke real. The old key dies on the next request. The new key pays only after a fresh human verification.</p>
+    <div class="foot"><span>Rebind</span><span>0:00</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">The hole · 0:25</p>
+    <h2>Revoke is recorded. The paygate never reads it.</h2>
+    <p class="cite">AgentBook has no revocation operation. A compromised wallet can still resolve.</p>
+    <p class="cite">worldcoin/agentkit #37 — RFC for revoke and rotation. The contract cannot express revoke.</p>
+    <p class="cite">worldcoin/agentkit #23 — unregister hits <span class="mono">ALREADY_REGISTERED</span>. There is no unregister.</p>
+    <p class="sub">That is the motivation. The product is an app-layer deny and rotate list in front of a paid grant.</p>
+    <div class="foot"><span>Rebind</span><span>0:25</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Before · 1:05 · foil</p>
+    <h2>Mark the key revoked. The grant still returns 200.</h2>
+    <div class="row">
+      <div class="card">
+        <h3>Registry</h3>
+        <p>Key <span class="mono">K</span></p>
+        <p class="bad">REVOKED</p>
+      </div>
+      <div class="card">
+        <h3>Same signed request</h3>
+        <p>Open session, and a fresh request</p>
+        <p class="ok">GRANTED</p>
+        <p class="mono gold">REVOKE_INEFFECTIVE</p>
+      </div>
+    </div>
+    <div class="foot"><span>npm run foil-revoke</span><span>1:05</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">After · 1:50 · win</p>
+    <h2>The next request re-reads the registry. The session cookie is not enough.</h2>
+    <div class="row">
+      <div class="card">
+        <h3>After revoke(K)</h3>
+        <p>Session still open</p>
+        <p class="bad">403 revoked</p>
+      </div>
+      <div class="card">
+        <h3>Fresh signature, no cookie</h3>
+        <p>checkedRevoke true</p>
+        <p class="bad">403 revoked</p>
+        <p class="mono gold">REVOKE_ENFORCED</p>
+      </div>
+    </div>
+    <div class="foot"><span>npm run win-revoke</span><span>1:50</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Rotate · 2:30</p>
+    <h2>K becomes K2. Without a rebind, K2 cannot pay.</h2>
+    <div class="row">
+      <div class="card">
+        <h3>Old key K</h3>
+        <p>Replaced, or already revoked</p>
+        <p class="bad">403</p>
+      </div>
+      <div class="card">
+        <h3>New key K2</h3>
+        <p>worldRebind is empty</p>
+        <p class="bad">403 rebind required</p>
+      </div>
+    </div>
+    <div class="foot"><span>Rotate updates the mapping. It does not grant.</span><span>2:30</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">World ID for Agents · 3:05</p>
+    <h2>The human finishes the journey. The server checks the result. Then K2 pays.</h2>
+    <ol>
+      <li><span>1</span> Start a rebind for K2.</li>
+      <li><span>2</span> Denied, expired, or cancelled: no grant.</li>
+      <li><span>3</span> A client that says “validated” changes nothing.</li>
+      <li><span>4</span> The server stores the subject, then the paid grant returns 200.</li>
+    </ol>
+    <div class="foot"><span>sandbox.auth.world.org · the paid grant is the protected action</span><span>3:05</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Close · 3:35</p>
+    <h2>Say this, then stop.</h2>
+    <p class="cite">Revoke is enforced on every grant.</p>
+    <p class="cite">Rotate needs a fresh human verification before the new key can pay.</p>
+    <p class="cite">That verification is World ID for Agents, checked on the server.</p>
+    <p class="sub">App-layer policy. Not a mainnet AgentBook opcode. Not login. Not a free trial.</p>
+    <div class="foot"><span>Rebind · ETHGlobal Tokyo 2026</span><span>3:35</span></div>
+  </section>
+</body>
+</html>

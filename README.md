@@ -83,12 +83,8 @@ Real AgentBook has no revoke operation. Compromised wallets can still resolve th
 - [worldcoin/agentkit#37](https://github.com/worldcoin/agentkit/issues/37) — RFC: re-registration, revocation, and wallet rotation. `IAgentBook` has no revocation op. The x402 docs talk about revoked registrations taking effect at lookup time, but the contract cannot express that.
 - [worldcoin/agentkit#23](https://github.com/worldcoin/agentkit/issues/23) — “How to unregister an agent.” The hosted flow returns `ALREADY_REGISTERED`. There is no unregister.
 
-This fixture is an **app-layer** stub of that gap: a registry that can record revoke and rotate, composed in front of a paygate that does not consult them. It is not an on-chain AgentBook opcode, and it does not patch mainnet.
+The registry is an app-layer policy list. It is not an on-chain AgentBook opcode. AgentBook is why revoke matters. The prize surface is World ID for Agents on `https://sandbox.auth.world.org`.
 
-Not in this repo: World ID, IDKit, live AgentKit, a free trial, World-as-login, or a C1 double-grant claim fix.
+Win mode consults revoke on every grant. A rotated key gets `worldRebind` only after the server validates a rebind. The local film uses issuer `local-sandbox`. A live device grant needs `WORLD_CLIENT_ID` and `WORLD_CLIENT_SECRET`. See [INTEGRATION-DEBRIEF.md](INTEGRATION-DEBRIEF.md) and [DAY1-COMPLETION.md](DAY1-COMPLETION.md).
 
-## Day 1
-
-Mid-loop revoke enforcement: every grant re-reads the registry, and a revoked or rotated-away key is denied even if a session is already open.
-
-Rotate re-bind: `K2` stays unusable until a fresh World / AgentBook proof is attached. `K` dies when the mapping moves.
+Not in this repo: IDKit-as-login, a free trial, or a C1 double-grant claim fix.
