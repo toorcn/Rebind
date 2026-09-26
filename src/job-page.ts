@@ -433,7 +433,7 @@ export function renderJobPage(input: JobPageInput): string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0c0d0a" />
+  <meta name="theme-color" content="#f5f6fd" />
   <title>Rebind — the pool pays two humans</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -441,29 +441,41 @@ export function renderJobPage(input: JobPageInput): string {
   <style>
     @view-transition { navigation: auto; }
     :root {
-      color-scheme: dark;
-      --bg: #0c0d0a;
-      --surface: #13150f;
-      --surface-2: #181b14;
-      --surface-3: #1f231a;
-      --line: rgba(244, 241, 232, 0.07);
-      --line-2: rgba(244, 241, 232, 0.13);
-      --text: #f4f1e8;
-      --text-2: #d6d1c3;
-      --muted: #9e998c;
-      --faint: #6b675e;
-      --gold: #e3b341;
-      --gold-2: #f1cd72;
-      --gold-soft: rgba(227, 179, 65, 0.1);
-      --ok: #8fdf7a;
-      --ok-soft: rgba(143, 223, 122, 0.1);
-      --bad: #ff8d8d;
-      --bad-soft: rgba(255, 141, 141, 0.09);
+      color-scheme: light;
+      /* ETHGlobal Tokyo 2026: night navy, neon yellow, sky, coral, periwinkle, lavender */
+      --bg: #f5f6fd;
+      --surface: #ffffff;
+      --surface-2: #fafbff;
+      --surface-3: #eef0fb;
+      --line: rgba(28, 41, 82, 0.08);
+      --line-2: rgba(28, 41, 82, 0.15);
+      --text: #111a3d;
+      --text-2: #394369;
+      --muted: #5f6890;
+      --faint: #8f97b8;
+      --navy: #1c2952;
+      --navy-2: #294481;
+      --accent: #5869eb;
+      --accent-soft: rgba(88, 105, 235, 0.1);
+      --coral: #ea6b43;
+      --sun: #f6b40e;
+      --sun-ink: #9a6a00;
+      --sun-soft: rgba(246, 180, 14, 0.14);
+      --sky: #5bbfe8;
+      --mint: #b7e9d4;
+      --pink: #f1b3e5;
+      --ok: #138a5c;
+      --ok-bright: #22b37a;
+      --ok-soft: rgba(34, 179, 122, 0.11);
+      --bad: #d63d55;
+      --bad-soft: rgba(214, 61, 85, 0.09);
       --serif: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif;
       --sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
       --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
       --ease: cubic-bezier(0.22, 1, 0.36, 1);
       --r: 20px;
+      --shadow: 0 1px 2px rgba(17, 26, 61, 0.04), 0 12px 32px -12px rgba(17, 26, 61, 0.14);
+      --shadow-lg: 0 1px 2px rgba(17, 26, 61, 0.04), 0 30px 60px -28px rgba(28, 41, 82, 0.28);
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
@@ -479,38 +491,44 @@ export function renderJobPage(input: JobPageInput): string {
     }
     body::before {
       content: "";
-      position: fixed;
-      inset: 0;
+      position: absolute;
+      inset: 0 0 auto;
+      height: 820px;
       pointer-events: none;
       z-index: 0;
       background:
-        radial-gradient(900px 520px at 78% -8%, rgba(227, 179, 65, 0.09), transparent 62%),
-        radial-gradient(700px 480px at -10% 30%, rgba(143, 223, 122, 0.035), transparent 60%);
+        radial-gradient(620px 380px at 88% 6%, rgba(244, 188, 151, 0.42), transparent 70%),
+        radial-gradient(520px 360px at 70% 38%, rgba(241, 179, 229, 0.22), transparent 70%),
+        radial-gradient(640px 420px at 4% 12%, rgba(91, 191, 232, 0.2), transparent 70%),
+        radial-gradient(520px 320px at 28% 60%, rgba(183, 233, 212, 0.28), transparent 70%);
     }
     body::after {
       content: "";
-      position: fixed;
-      inset: 0;
+      position: absolute;
+      inset: 0 0 auto;
+      height: 820px;
       pointer-events: none;
       z-index: 0;
-      opacity: 0.05;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+      opacity: 0.55;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><g fill='none' stroke='%231c2952' stroke-opacity='0.07' stroke-width='1'><circle cx='0' cy='0' r='32'/><circle cx='64' cy='0' r='32'/><circle cx='0' cy='64' r='32'/><circle cx='64' cy='64' r='32'/><circle cx='32' cy='32' r='32'/></g></svg>");
+      -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.5) 45%, transparent 100%);
+      mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.5) 45%, transparent 100%);
     }
     .wrap { position: relative; z-index: 1; max-width: 1160px; margin: 0 auto; padding: 0 28px; }
-    a { color: var(--gold); text-decoration: none; }
-    a:hover { color: var(--gold-2); }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--navy-2); }
     code { font-family: var(--mono); font-size: 0.86em; }
-    :focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 8px; }
-    ::selection { background: rgba(227, 179, 65, 0.35); }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+    ::selection { background: rgba(88, 105, 235, 0.22); }
 
     /* nav */
     .nav {
       position: sticky;
       top: 0;
       z-index: 20;
-      backdrop-filter: saturate(140%) blur(14px);
-      -webkit-backdrop-filter: saturate(140%) blur(14px);
-      background: rgba(12, 13, 10, 0.72);
+      backdrop-filter: saturate(160%) blur(14px);
+      -webkit-backdrop-filter: saturate(160%) blur(14px);
+      background: rgba(245, 246, 253, 0.78);
       border-bottom: 1px solid var(--line);
     }
     .nav .wrap { display: flex; align-items: center; gap: 28px; height: 60px; }
@@ -519,7 +537,7 @@ export function renderJobPage(input: JobPageInput): string {
     .brand svg { width: 26px; height: 18px; }
     .nav nav { display: flex; gap: 4px; }
     .nav nav a { color: var(--muted); font-size: 14px; padding: 6px 10px; border-radius: 8px; transition: color 0.2s, background 0.2s; }
-    .nav nav a:hover { color: var(--text); background: var(--surface-2); }
+    .nav nav a:hover { color: var(--text); background: rgba(28, 41, 82, 0.05); }
     .net {
       margin-left: auto;
       display: inline-flex;
@@ -527,13 +545,14 @@ export function renderJobPage(input: JobPageInput): string {
       gap: 8px;
       font: 12px/1 var(--mono);
       color: var(--muted);
+      background: var(--surface);
       border: 1px solid var(--line-2);
       padding: 7px 11px;
       border-radius: 999px;
       white-space: nowrap;
     }
     .net i { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
-    .net[data-state="on"] i { background: var(--ok); box-shadow: 0 0 0 0 rgba(143, 223, 122, 0.6); animation: ping 2.4s var(--ease) infinite; }
+    .net[data-state="on"] i { background: var(--ok-bright); animation: ping 2.4s var(--ease) infinite; }
     .net[data-state="off"] i { background: var(--faint); }
 
     /* hero */
@@ -554,7 +573,7 @@ export function renderJobPage(input: JobPageInput): string {
       text-transform: uppercase;
       color: var(--muted);
     }
-    .eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--gold); }
+    .eyebrow::before { content: ""; width: 22px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--coral), var(--sun)); }
     h1 {
       margin: 0;
       font-family: var(--serif);
@@ -562,18 +581,26 @@ export function renderJobPage(input: JobPageInput): string {
       font-size: clamp(2.8rem, 6.4vw, 5.2rem);
       line-height: 0.98;
       letter-spacing: -0.025em;
+      color: var(--navy);
     }
-    h1 em { font-style: italic; color: var(--gold); }
+    h1 em {
+      font-style: italic;
+      padding-right: 0.06em;
+      background: linear-gradient(95deg, var(--coral) 10%, #f08f2e 55%, #e9a800 95%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
     .deck { margin: 24px 0 0; color: var(--text-2); max-width: 34rem; font-size: 1.06rem; line-height: 1.6; }
     .hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
 
     .ledger-card {
       position: relative;
-      background: linear-gradient(180deg, var(--surface-2), var(--surface));
-      border: 1px solid var(--line-2);
+      background: var(--surface);
+      border: 1px solid var(--line);
       border-radius: var(--r);
       padding: 22px 22px 18px;
-      box-shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      box-shadow: var(--shadow-lg);
     }
     .ledger-card::before {
       content: "";
@@ -581,7 +608,7 @@ export function renderJobPage(input: JobPageInput): string {
       inset: -1px;
       border-radius: inherit;
       padding: 1px;
-      background: linear-gradient(140deg, rgba(227, 179, 65, 0.45), transparent 38%);
+      background: linear-gradient(140deg, rgba(88, 105, 235, 0.55), rgba(183, 233, 212, 0.6) 40%, transparent 70%);
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
@@ -596,25 +623,25 @@ export function renderJobPage(input: JobPageInput): string {
       color: var(--muted);
     }
     .live { display: inline-flex; align-items: center; gap: 6px; font: 11px/1 var(--mono); color: var(--muted); }
-    .live i { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: blink 2s ease-in-out infinite; }
+    .live i { width: 6px; height: 6px; border-radius: 50%; background: var(--sun); animation: blink 2s ease-in-out infinite; }
     .big { display: flex; align-items: baseline; gap: 10px; margin: 18px 0 2px; }
     .big strong { font: 400 4rem/1 var(--serif); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--ok); }
     .big span { color: var(--muted); font-size: 14px; }
     .ledger-card .sub { margin: 0; color: var(--faint); font-size: 13px; }
     .bar { display: flex; gap: 3px; height: 8px; margin: 20px 0 16px; border-radius: 99px; overflow: hidden; background: var(--surface-3); }
     .bar span { width: 0; flex: none; border-radius: 2px; animation: grow 1.1s var(--ease) 0.35s forwards; }
-    .bar .paid { background: var(--ok); }
-    .bar .held { background: var(--gold); }
-    .bar .refused { background: repeating-linear-gradient(-45deg, var(--bad) 0 3px, rgba(255, 141, 141, 0.55) 3px 6px); }
+    .bar .paid { background: var(--ok-bright); }
+    .bar .held { background: var(--sun); }
+    .bar .refused { background: repeating-linear-gradient(-45deg, var(--bad) 0 3px, rgba(214, 61, 85, 0.45) 3px 6px); }
     .bar.empty span { background: transparent; }
     .rows { list-style: none; margin: 0; padding: 0; }
     .rows li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
     .rows li i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
     .rows li span { color: var(--text-2); }
     .rows li small { color: var(--faint); font-size: 12.5px; margin-left: 2px; }
-    .rows li b { margin-left: auto; font: 500 15px/1 var(--mono); font-variant-numeric: tabular-nums; }
-    .rows .paid i { background: var(--ok); }
-    .rows .held i { background: var(--gold); }
+    .rows li b { margin-left: auto; font: 500 15px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--text); }
+    .rows .paid i { background: var(--ok-bright); }
+    .rows .held i { background: var(--sun); }
     .rows .refused i { background: var(--bad); }
     .rows .refused b { color: var(--bad); }
 
@@ -637,13 +664,13 @@ export function renderJobPage(input: JobPageInput): string {
     .btn svg { width: 16px; height: 16px; }
     .btn:active { transform: scale(0.97); }
     .btn.primary {
-      background: var(--gold);
-      color: #17140a;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 24px -10px rgba(227, 179, 65, 0.6);
+      background: var(--navy);
+      color: #fff;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 24px -12px rgba(28, 41, 82, 0.7);
     }
-    .btn.primary:hover { background: var(--gold-2); color: #17140a; }
-    .btn.ghost { background: rgba(244, 241, 232, 0.03); color: var(--text); border-color: var(--line-2); }
-    .btn.ghost:hover { background: rgba(244, 241, 232, 0.07); border-color: rgba(244, 241, 232, 0.22); color: var(--text); }
+    .btn.primary:hover { background: var(--navy-2); color: #fff; }
+    .btn.ghost { background: var(--surface); color: var(--text); border-color: var(--line-2); box-shadow: 0 1px 2px rgba(17, 26, 61, 0.05); }
+    .btn.ghost:hover { border-color: rgba(88, 105, 235, 0.45); color: var(--navy); }
     .btn.lg { padding: 14px 20px; font-size: 15px; }
     .btn.sm { padding: 9px 13px; font-size: 13px; border-radius: 10px; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
@@ -654,11 +681,11 @@ export function renderJobPage(input: JobPageInput): string {
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      border: 2px solid currentColor;
-      border-color: rgba(23, 20, 10, 0.85) rgba(23, 20, 10, 0.2) rgba(23, 20, 10, 0.2);
+      border: 2px solid;
+      border-color: #fff rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.25);
       animation: spin 0.7s linear infinite;
     }
-    .btn.ghost[aria-busy="true"]::after { border-color: var(--text) rgba(244, 241, 232, 0.2) rgba(244, 241, 232, 0.2); }
+    .btn.ghost[aria-busy="true"]::after { border-color: var(--navy) rgba(28, 41, 82, 0.18) rgba(28, 41, 82, 0.18); }
 
     /* desk */
     .desk {
@@ -682,7 +709,7 @@ export function renderJobPage(input: JobPageInput): string {
       background: var(--line-2);
     }
     .steps li:last-child::before { display: none; }
-    .steps li.done::before { background: linear-gradient(var(--ok), rgba(143, 223, 122, 0.25)); }
+    .steps li.done::before { background: linear-gradient(var(--ok-bright), rgba(34, 179, 122, 0.25)); }
     .num {
       flex: none;
       display: grid;
@@ -699,36 +726,43 @@ export function renderJobPage(input: JobPageInput): string {
     .steps strong { display: block; font-weight: 500; font-size: 14.5px; color: inherit; margin-top: 5px; }
     .steps small { display: block; font-size: 12.5px; color: var(--faint); margin-top: 1px; }
     .steps li.done { color: var(--text-2); }
-    .steps li.done .num { border-color: rgba(143, 223, 122, 0.4); background: var(--ok-soft); color: var(--ok); }
+    .steps li.done .num { border-color: rgba(34, 179, 122, 0.45); background: var(--ok-soft); color: var(--ok); }
     .steps li.on { color: var(--text); }
-    .steps li.on .num { border-color: var(--gold); background: var(--gold); color: #17140a; box-shadow: 0 0 0 5px var(--gold-soft); }
+    .steps li.on .num { border-color: var(--accent); background: var(--accent); color: #fff; box-shadow: 0 0 0 5px var(--accent-soft); }
     .steps li.on small { color: var(--muted); }
     .steps li.bad { color: var(--bad); }
     .steps li.bad .num { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); font-size: 16px; box-shadow: 0 0 0 5px var(--bad-soft); }
 
-    .focus { border: 1px solid var(--line); border-radius: 16px; padding: 16px; background: rgba(19, 21, 15, 0.6); }
+    .focus { border: 1px solid var(--line); border-radius: 16px; padding: 16px; background: var(--surface); box-shadow: var(--shadow); }
     .focus.empty p:last-child { margin: 8px 0 0; color: var(--muted); font-size: 13.5px; }
     .focus-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .focus-top code { color: var(--faint); font-size: 11.5px; }
-    .focus h3 { margin: 10px 0 0; font: 400 1.35rem/1.15 var(--serif); letter-spacing: -0.01em; }
+    .focus h3 { margin: 10px 0 0; font: 400 1.35rem/1.15 var(--serif); letter-spacing: -0.01em; color: var(--navy); }
     .focus > p { margin: 6px 0 0; color: var(--muted); font-size: 13.5px; }
     .focus dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0 0; }
-    .focus dl div { background: var(--surface-2); border-radius: 10px; padding: 8px 10px; }
+    .focus dl div { background: var(--surface-3); border-radius: 10px; padding: 8px 10px; }
     .focus dt { font: 10.5px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
     .focus dd { margin: 4px 0 0; font-size: 13px; font-weight: 500; }
     .focus dd.ok { color: var(--ok); }
     .focus dd.bad { color: var(--bad); }
-    .focus dd.wait { color: var(--gold); }
+    .focus dd.wait { color: var(--sun-ink); }
 
     .panel {
       view-transition-name: panel;
       position: relative;
-      background: linear-gradient(180deg, var(--surface-2), var(--surface) 55%);
-      border: 1px solid var(--line-2);
+      background: var(--surface);
+      border: 1px solid var(--line);
       border-radius: 24px;
       padding: 34px 36px 32px;
-      box-shadow: 0 50px 100px -50px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+      box-shadow: var(--shadow-lg);
       overflow: hidden;
+    }
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 3px;
+      background: linear-gradient(90deg, var(--sky), var(--accent) 35%, var(--pink) 65%, var(--coral) 85%, var(--sun));
     }
     .step {
       margin: 0;
@@ -738,12 +772,12 @@ export function renderJobPage(input: JobPageInput): string {
       font: 500 11.5px/1 var(--mono);
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--gold);
+      color: var(--accent);
     }
     .step::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
     .step.ok { color: var(--ok); }
     .step.bad { color: var(--bad); }
-    .panel h2 { margin: 14px 0 0; font: 400 clamp(2rem, 3.6vw, 2.7rem)/1.05 var(--serif); letter-spacing: -0.02em; max-width: 30rem; }
+    .panel h2 { margin: 14px 0 0; font: 400 clamp(2rem, 3.6vw, 2.7rem)/1.05 var(--serif); letter-spacing: -0.02em; max-width: 30rem; color: var(--navy); }
     .lead { margin: 12px 0 0; color: var(--text-2); max-width: 36rem; }
     .hint { margin: 10px 0 0; color: var(--muted); font-size: 13.5px; }
     .verdict {
@@ -767,19 +801,19 @@ export function renderJobPage(input: JobPageInput): string {
     form { margin: 0; }
     .post { display: grid; gap: 16px; margin-top: 28px; }
     .field { display: grid; gap: 7px; }
-    .field > span, .field > label { font-size: 13px; color: var(--muted); font-weight: 500; }
+    .field > span, .field > label { font-size: 13px; color: var(--text-2); font-weight: 500; }
     input {
       width: 100%;
       font: 15px/1.3 var(--sans);
       color: var(--text);
-      background: rgba(12, 13, 10, 0.7);
+      background: var(--surface-2);
       border: 1px solid var(--line-2);
       border-radius: 12px;
       padding: 13px 14px;
       transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
     }
-    input:hover { border-color: rgba(244, 241, 232, 0.2); }
-    input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 4px var(--gold-soft); background: var(--bg); }
+    input:hover { border-color: rgba(28, 41, 82, 0.26); }
+    input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); background: var(--surface); }
     input:user-invalid { border-color: var(--bad); box-shadow: 0 0 0 4px var(--bad-soft); }
     .reward { position: relative; }
     .reward input { font-family: var(--mono); font-size: 17px; padding-right: 84px; -moz-appearance: textfield; }
@@ -789,15 +823,15 @@ export function renderJobPage(input: JobPageInput): string {
     .chip {
       font: 500 12.5px/1 var(--mono);
       color: var(--muted);
-      background: transparent;
+      background: var(--surface);
       border: 1px solid var(--line-2);
       border-radius: 99px;
       padding: 7px 11px;
       cursor: pointer;
       transition: all 0.18s var(--ease);
     }
-    .chip:hover { color: var(--text); border-color: rgba(244, 241, 232, 0.25); }
-    .chip[aria-pressed="true"] { color: #17140a; background: var(--gold); border-color: var(--gold); }
+    .chip:hover { color: var(--text); border-color: rgba(88, 105, 235, 0.45); }
+    .chip[aria-pressed="true"] { color: #fff; background: var(--accent); border-color: var(--accent); }
     .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .submit-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: 6px; }
     .submit-row .hint { margin: 0; }
@@ -810,19 +844,19 @@ export function renderJobPage(input: JobPageInput): string {
       border: 1px solid var(--line-2);
       border-radius: 16px;
       padding: 16px 16px 14px;
-      background: rgba(12, 13, 10, 0.5);
+      background: var(--surface-2);
       transition: border-color 0.3s, box-shadow 0.3s;
       min-width: 0;
     }
-    .seat.active { border-color: rgba(227, 179, 65, 0.55); box-shadow: 0 0 0 4px var(--gold-soft); }
-    .seat.verified { border-color: rgba(143, 223, 122, 0.3); }
+    .seat.active { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); background: var(--surface); }
+    .seat.verified { border-color: rgba(34, 179, 122, 0.4); }
     .seat-role { margin: 0; font: 500 10.5px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
     .seat h3 { margin: 8px 0 0; font-size: 16px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .seat-status { display: flex; align-items: center; gap: 7px; margin: 10px 0 0; font-size: 13px; color: var(--muted); }
     .seat-status svg { width: 15px; height: 15px; }
     .seat-status.ok { color: var(--ok); }
     .seat-status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
-    .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); animation: ping 1.8s var(--ease) infinite; }
+    .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: ping-accent 1.8s var(--ease) infinite; }
     .seat-sub { display: block; margin-top: 8px; color: var(--text-2); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .seat-sub.empty { color: var(--faint); }
     .versus { display: grid; place-items: center; align-content: center; gap: 4px; }
@@ -841,18 +875,18 @@ export function renderJobPage(input: JobPageInput): string {
     .seats + .hint { margin-top: 16px; }
     .seats[data-match="same"] .versus span { color: var(--bad); border-color: var(--bad); background: var(--bad-soft); animation: shake 0.5s var(--ease) 0.2s; }
     .seats[data-match="same"] .versus small, .seats[data-match="same"] .seat-sub { color: var(--bad); }
-    .seats[data-match="same"] .seat { border-color: rgba(255, 141, 141, 0.35); }
-    .seats[data-match="differ"] .versus span { color: var(--ok); border-color: var(--ok); background: var(--ok-soft); }
+    .seats[data-match="same"] .seat { border-color: rgba(214, 61, 85, 0.35); }
+    .seats[data-match="differ"] .versus span { color: var(--ok); border-color: var(--ok-bright); background: var(--ok-soft); }
     .seats[data-match="differ"] .versus small { color: var(--ok); }
 
     /* world code */
     .world-start { margin-top: 24px; }
-    .code-block { margin-top: 20px; border: 1px solid var(--line-2); border-radius: 18px; padding: 18px; background: rgba(12, 13, 10, 0.55); }
+    .code-block { margin-top: 20px; border: 1px solid var(--line-2); border-radius: 18px; padding: 18px; background: linear-gradient(180deg, #f3f5ff, var(--surface-2)); }
     .code-head { display: flex; justify-content: space-between; align-items: center; }
     .copy {
       font: 500 12px/1 var(--mono);
       color: var(--muted);
-      background: transparent;
+      background: var(--surface);
       border: 1px solid var(--line-2);
       border-radius: 8px;
       padding: 6px 9px;
@@ -860,7 +894,7 @@ export function renderJobPage(input: JobPageInput): string {
       transition: all 0.2s;
     }
     .copy:hover { color: var(--text); }
-    .copy[data-done] { color: var(--ok); border-color: rgba(143, 223, 122, 0.4); }
+    .copy[data-done] { color: var(--ok); border-color: rgba(34, 179, 122, 0.45); }
     .code { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 0; }
     .code span {
       display: grid;
@@ -869,9 +903,10 @@ export function renderJobPage(input: JobPageInput): string {
       height: 56px;
       padding: 0 6px;
       font: 500 26px/1 var(--mono);
-      color: var(--text);
-      background: var(--surface-2);
+      color: var(--navy);
+      background: var(--surface);
       border: 1px solid var(--line-2);
+      border-bottom-width: 2px;
       border-radius: 10px;
       animation: rise 0.5s var(--ease) both;
     }
@@ -881,9 +916,9 @@ export function renderJobPage(input: JobPageInput): string {
     .code span:nth-child(8) { animation-delay: 0.28s; } .code span:nth-child(9) { animation-delay: 0.32s; }
     .code span.sep { min-width: 14px; background: none; border: none; color: var(--faint); }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
-    .poll { margin: 12px 0 0; display: flex; align-items: center; gap: 8px; font: 12px/1.4 var(--mono); color: var(--faint); min-height: 1.4em; }
+    .poll { margin: 12px 0 0; display: flex; align-items: center; gap: 8px; font: 12px/1.4 var(--mono); color: var(--muted); min-height: 1.4em; }
     .poll:empty { display: none; }
-    .poll[data-live]::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: blink 1.4s ease-in-out infinite; }
+    .poll[data-live]::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: blink 1.4s ease-in-out infinite; }
 
     .tamper {
       display: flex;
@@ -914,9 +949,9 @@ export function renderJobPage(input: JobPageInput): string {
     .notice p { margin: 0; font-size: 13.5px; color: var(--text-2); }
     .notice .notice-title { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
     .notice-icon svg { width: 20px; height: 20px; display: block; }
-    .notice.wait { background: var(--gold-soft); border-color: rgba(227, 179, 65, 0.28); }
-    .notice.wait .notice-title, .notice.wait .notice-icon { color: var(--gold); }
-    .notice.bad { background: var(--bad-soft); border-color: rgba(255, 141, 141, 0.28); }
+    .notice.wait { background: var(--sun-soft); border-color: rgba(246, 180, 14, 0.4); }
+    .notice.wait .notice-title, .notice.wait .notice-icon { color: var(--sun-ink); }
+    .notice.bad { background: var(--bad-soft); border-color: rgba(214, 61, 85, 0.3); }
     .notice.bad .notice-title, .notice.bad .notice-icon { color: var(--bad); }
     .notice-close { background: none; border: 0; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 2px; }
     .notice-close:hover { color: var(--text); }
@@ -925,9 +960,9 @@ export function renderJobPage(input: JobPageInput): string {
     /* sections */
     .section { padding: 72px 0 0; }
     .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin-bottom: 18px; flex-wrap: wrap; }
-    .section-head h2 { margin: 0; font: 400 2rem/1.1 var(--serif); letter-spacing: -0.015em; }
+    .section-head h2 { margin: 0; font: 400 2rem/1.1 var(--serif); letter-spacing: -0.015em; color: var(--navy); }
     .section-head p { margin: 0; color: var(--faint); font: 12px var(--mono); }
-    .history { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: rgba(19, 21, 15, 0.55); }
+    .history { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
     .history li {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto 84px;
@@ -938,8 +973,8 @@ export function renderJobPage(input: JobPageInput): string {
       transition: background 0.2s;
     }
     .history li:first-child { border-top: 0; }
-    .history li:hover { background: rgba(244, 241, 232, 0.025); }
-    .history li.current { background: linear-gradient(90deg, var(--gold-soft), transparent 60%); box-shadow: inset 2px 0 0 var(--gold); }
+    .history li:hover { background: var(--surface-2); }
+    .history li.current { background: linear-gradient(90deg, var(--accent-soft), transparent 60%); box-shadow: inset 3px 0 0 var(--accent); }
     .h-title { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
     .h-title span { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .h-title code { color: var(--faint); font-size: 11.5px; flex: none; }
@@ -950,6 +985,7 @@ export function renderJobPage(input: JobPageInput): string {
       align-items: center;
       gap: 7px;
       font-size: 12.5px;
+      font-weight: 500;
       padding: 5px 10px;
       border-radius: 99px;
       background: var(--surface-3);
@@ -959,24 +995,25 @@ export function renderJobPage(input: JobPageInput): string {
     .chip-status i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
     .chip-status.ok { color: var(--ok); background: var(--ok-soft); }
     .chip-status.bad { color: var(--bad); background: var(--bad-soft); }
-    .chip-status.wait { color: var(--gold); background: var(--gold-soft); }
+    .chip-status.wait { color: var(--sun-ink); background: var(--sun-soft); }
 
     .takes { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
     .take {
       display: flex;
       flex-direction: column;
-      border: 1px solid var(--line-2);
+      border: 1px solid var(--line);
       border-radius: 22px;
       padding: 24px;
-      background: linear-gradient(180deg, var(--surface-2), var(--surface));
+      background: var(--surface);
+      box-shadow: var(--shadow);
       min-width: 0;
     }
     .take-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .tag { font: 11px/1 var(--mono); color: var(--muted); border: 1px solid var(--line-2); border-radius: 99px; padding: 5px 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .tag.on { color: var(--ok); border-color: rgba(143, 223, 122, 0.35); }
-    .take h3 { margin: 16px 0 0; font: 400 1.7rem/1.1 var(--serif); letter-spacing: -0.01em; }
+    .tag { font: 11px/1 var(--mono); color: var(--muted); background: var(--surface-3); border-radius: 99px; padding: 6px 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tag.on { color: var(--ok); background: var(--ok-soft); }
+    .take h3 { margin: 16px 0 0; font: 400 1.7rem/1.1 var(--serif); letter-spacing: -0.01em; color: var(--navy); }
     .take > p { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
-    .take > p code { color: var(--text-2); }
+    .take > p code { color: var(--navy-2); background: var(--surface-3); padding: 1px 5px; border-radius: 5px; }
     .take .btn { margin-top: 20px; align-self: flex-start; }
     .beats { list-style: none; margin: 0; padding: 0; }
     .beats:not(:empty) { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
@@ -984,31 +1021,31 @@ export function renderJobPage(input: JobPageInput): string {
     .beats li::before { content: ""; position: absolute; left: 4px; top: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--faint); box-shadow: 0 0 0 4px var(--surface); z-index: 1; }
     .beats li::after { content: ""; position: absolute; left: 8px; top: 14px; bottom: -4px; width: 1px; background: var(--line-2); }
     .beats li:last-child::after { display: none; }
-    .beats li.ok::before { background: var(--ok); }
+    .beats li.ok::before { background: var(--ok-bright); }
     .beats li.bad::before { background: var(--bad); }
-    .beats li.wait::before { background: var(--gold); }
+    .beats li.wait::before { background: var(--sun); }
     .beat-stamp { display: inline-block; font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em; padding: 4px 7px; border-radius: 6px; background: var(--surface-3); color: var(--muted); }
     .ok > .beat-stamp { color: var(--ok); background: var(--ok-soft); }
     .bad > .beat-stamp { color: var(--bad); background: var(--bad-soft); }
-    .wait > .beat-stamp { color: var(--gold); background: var(--gold-soft); }
+    .wait > .beat-stamp { color: var(--sun-ink); background: var(--sun-soft); }
     .beats h4 { margin: 8px 0 0; font-size: 14.5px; font-weight: 500; }
     .beats p { margin: 4px 0 0; color: var(--muted); font-size: 13.5px; }
     .beats .nums { font: 12px var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
-    .beats .nums a { color: var(--gold); }
+    .beats .nums a { color: var(--accent); }
     .result { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; font: 500 12.5px var(--mono); animation: rise 0.5s var(--ease) both; }
     .result.ok { color: var(--ok); }
     .result.bad { color: var(--bad); }
     .result svg { width: 16px; height: 16px; }
     .skeleton { display: grid; gap: 10px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
-    .skeleton i { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-3), #2a2f24, var(--surface-3)); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
+    .skeleton i { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-3), #f7f8ff, var(--surface-3)); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
     .skeleton i:nth-child(2) { width: 82%; } .skeleton i:nth-child(3) { width: 64%; }
     .skeleton p { margin: 4px 0 0; color: var(--faint); font: 12px var(--mono); }
 
-    footer { margin-top: 96px; border-top: 1px solid var(--line); }
+    footer { margin-top: 96px; border-top: 1px solid var(--line); background: var(--surface); }
     footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; padding-top: 26px; padding-bottom: 40px; color: var(--faint); font-size: 13px; }
     footer nav { display: flex; gap: 18px; flex-wrap: wrap; }
     footer a { color: var(--muted); }
-    footer a:hover { color: var(--text); }
+    footer a:hover { color: var(--navy); }
 
     /* motion */
     .reveal { animation: rise 0.8s var(--ease) both; animation-delay: calc(var(--d, 0) * 70ms); }
@@ -1018,12 +1055,11 @@ export function renderJobPage(input: JobPageInput): string {
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes blink { 50% { opacity: 0.3; } }
     @keyframes shimmer { to { background-position: -200% 0; } }
-    @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(143, 223, 122, 0.55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(143, 223, 122, 0); } }
+    @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(34, 179, 122, 0.5); } 70%, 100% { box-shadow: 0 0 0 7px rgba(34, 179, 122, 0); } }
+    @keyframes ping-accent { 0% { box-shadow: 0 0 0 0 rgba(88, 105, 235, 0.5); } 70%, 100% { box-shadow: 0 0 0 7px rgba(88, 105, 235, 0); } }
     @keyframes stamp { from { opacity: 0; transform: rotate(-6deg) scale(1.6); } to { opacity: 1; transform: rotate(-6deg) scale(1); } }
     @keyframes shake { 20%, 60% { transform: translateX(-3px); } 40%, 80% { transform: translateX(3px); } }
     ::view-transition-old(panel), ::view-transition-new(panel) { animation-duration: 0.35s; animation-timing-function: var(--ease); }
-    .pulse { box-shadow: 0 0 0 0 rgba(227, 179, 65, 0.6); animation-name: ping-gold; }
-    @keyframes ping-gold { 0% { box-shadow: 0 0 0 0 rgba(227, 179, 65, 0.55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(227, 179, 65, 0); } }
 
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.001ms !important; animation-delay: 0s !important; transition-duration: 0.001ms !important; }
@@ -1044,7 +1080,7 @@ export function renderJobPage(input: JobPageInput): string {
       .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
       .steps li { flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 0; }
       .steps li::before { left: calc(50% + 20px); right: calc(-50% + 20px); top: 15px; bottom: auto; width: auto; height: 1px; }
-      .steps li.done::before { background: var(--ok); }
+      .steps li.done::before { background: var(--ok-bright); }
       .steps strong { margin-top: 0; font-size: 12px; }
       .steps small { display: none; }
       .panel { padding: 24px 18px 22px; border-radius: 20px; }
@@ -1071,7 +1107,7 @@ export function renderJobPage(input: JobPageInput): string {
   <header class="nav">
     <div class="wrap">
       <a class="brand" href="/" aria-label="Rebind home">
-        <svg viewBox="0 0 26 18" aria-hidden="true"><circle cx="9" cy="9" r="7.5" fill="none" stroke="#e3b341" stroke-width="1.6"/><circle cx="17" cy="9" r="7.5" fill="none" stroke="#f4f1e8" stroke-width="1.6" stroke-opacity="0.75"/></svg>
+        <svg viewBox="0 0 26 18" aria-hidden="true"><circle cx="9" cy="9" r="7.5" fill="none" stroke="#ea6b43" stroke-width="1.8"/><circle cx="17" cy="9" r="7.5" fill="none" stroke="#5869eb" stroke-width="1.8"/></svg>
         Rebind
       </a>
       <nav aria-label="Primary">
