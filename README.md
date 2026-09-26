@@ -10,7 +10,9 @@ npm run self-pay
 npm run dev
 ```
 
-Open http://127.0.0.1:43210 . `self-pay` prints `SAME_HUMAN`, `CLIENT_CLAIM_IGNORED`, `NOT_A_WORLD_PROOF`, and `PAYOUT_RELEASED`, then `SELF_PAY_PASSED`.
+Open http://127.0.0.1:43210 . The home page is the wallet desk: connect MetaMask, Rabby, or Coinbase Wallet on World Chain Sepolia, mint DemoUSD, and fund a job from that wallet. A second wallet delivers. Each wallet proves with World App, and the server writes that subject onto the address that signed. Settlement pays two humans and reverts when they are one person. The in-app credit rehearsal is at `/credits`.
+
+`self-pay` prints `SAME_HUMAN`, `CLIENT_CLAIM_IGNORED`, `NOT_A_WORLD_PROOF`, and `PAYOUT_RELEASED`, then `SELF_PAY_PASSED`.
 
 The earlier revoke desk is still at `/desk`. The 90-second cut is at `/film`. The animated settlement, separate from the pool, is at `/flow`.
 

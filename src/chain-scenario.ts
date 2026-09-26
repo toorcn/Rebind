@@ -161,6 +161,14 @@ function decodeRevert(err: unknown): RevertInfo {
   return { name: "unknown", args: [] };
 }
 
+export function openChain(config: ChainScenarioConfig): Clients {
+  return buildClients(config);
+}
+
+export function hookRevertName(err: unknown): string {
+  return decodeRevert(err).name;
+}
+
 /**
  * The on-chain take: escrow locks, settlement refuses one human, and pays two.
  *

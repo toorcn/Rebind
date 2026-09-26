@@ -1,6 +1,8 @@
 import type { Express, Request, Response } from "express";
 import type { WorldPrompt } from "./durable-state";
+import { chainStatus } from "./chain";
 import { renderJobPage } from "./job-page";
+import { renderWalletPage } from "./wallet-page";
 import { JobPool, WORLD_ISSUER, type Seat } from "./pool";
 import { runSelfPay } from "./self-pay-run";
 import { pullValidatedSubject, startDeviceGrant } from "./world-oidc";
@@ -65,11 +67,15 @@ function sendJob(req: Request, res: Response, status: number, body: unknown, fla
     return;
   }
   const suffix = flash ? `?flash=${flash}` : "";
-  res.redirect(`/${suffix}`);
+  res.redirect(`/credits${suffix}`);
 }
 
 export function mountJobDesk(app: Express, hooks: JobDeskHooks): void {
-  app.get("/", (req: Request, res: Response) => {
+  app.get("/", (_req: Request, res: Response) => {
+    res.type("html").send(renderWalletPage(chainStatus()));
+  });
+
+  app.get("/credits", (req: Request, res: Response) => {
     res.type("html").send(
       renderJobPage({
         jobs: hooks.pool.list(),
@@ -179,7 +185,7 @@ export function mountJobDesk(app: Express, hooks: JobDeskHooks): void {
         verificationUriComplete: live.verificationUriComplete ?? live.verificationUri,
       });
       if (!wantsJson(req)) {
-        res.redirect("/");
+        res.redirect("/credits");
         return;
       }
       res.status(201).json({

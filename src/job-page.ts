@@ -1124,7 +1124,7 @@ export function renderJobPage(input: JobPageInput): string {
       <div>
         <p class="eyebrow reveal" style="--d:0">Job pool · World ID · ERC-8183</p>
         <h1 class="reveal" style="--d:1">The pool pays <em>two different</em> humans.</h1>
-        <p class="deck reveal" style="--d:2">One person can run the buyer and the worker and finish the job. The credits stay in escrow, and that sale does not count. A second person proves the buyer, and the same delivery gets paid.</p>
+        <p class="deck reveal" style="--d:2">One person can run the buyer and the worker and finish the job. The credits stay in escrow, and that sale does not count. A second person proves the buyer, and the same delivery gets paid. Your wallet signs the live version of this on the home page.</p>
         <div class="hero-cta reveal" style="--d:3">
           <a class="btn primary lg" href="#desk">${focus ? "Continue the job" : "Post a job"} <span aria-hidden="true">↓</span></a>
           <a class="btn ghost lg" href="/flow">Watch the flow</a>
@@ -1185,7 +1185,7 @@ export function renderJobPage(input: JobPageInput): string {
   <footer>
     <div class="wrap">
       <span>Rebind · ETHGlobal Tokyo 2026</span>
-      <nav aria-label="Earlier cuts"><a href="/desk">Revoke a key</a><a href="/film">90-second film</a><a href="/flow">Watch the flow</a></nav>
+      <nav aria-label="Earlier cuts"><a href="/">Wallet desk</a><a href="/desk">Revoke a key</a><a href="/film">90-second film</a><a href="/flow">Watch the flow</a></nav>
     </div>
   </footer>
 
@@ -1316,11 +1316,11 @@ export function renderJobPage(input: JobPageInput): string {
               schedule(5000);
             } else if (response.ok && body.attached) {
               say("Approved. Updating…", false);
-              location.replace("/#desk");
+              location.replace("/credits#desk");
             } else if (response.status === 403) {
-              location.replace("/?flash=not-approved#desk");
+              location.replace("/credits?flash=not-approved#desk");
             } else {
-              location.replace("/?flash=world-error#desk");
+              location.replace("/credits?flash=world-error#desk");
             }
           } catch (error) {
             say("Connection hiccup. Retrying…", true);

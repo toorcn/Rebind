@@ -928,7 +928,7 @@ export function createApp(registry: AgentBookRegistry, options: AppOptions = {})
   });
 
   mountJobDesk(app, { pool, jobDevices, jobPrompts });
-  mountChainDesk(app);
+  mountChainDesk(app, { devices: jobDevices, prompts: jobPrompts });
 
   return app;
 }
