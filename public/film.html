@@ -30,16 +30,22 @@
       letter-spacing: -0.03em;
     }
     .lead { margin: 14px 0 0; color: #d9d3c5; max-width: 40rem; }
-    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 22px; }
-    button {
-      font: inherit;
-      background: #e3b341;
-      color: #12140f;
-      border: 0;
-      padding: 10px 16px;
-      cursor: pointer;
+    .doors { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
+    .door, button.door {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+      text-align: left; border-radius: 16px; padding: 16px 18px; cursor: pointer;
+      font: inherit; text-decoration: none; border: 1px solid #3a4034;
+      background: #181b15; color: inherit;
     }
-    button.ghost { background: transparent; color: #f4f1e8; border: 1px solid #3a4034; }
+    .door strong { font-size: 1.05rem; }
+    .door span, button.door span { color: #b7b2a6; font-size: 0.95rem; font-weight: 400; }
+    a.door.primary { background: #e3b341; color: #12140f; border-color: #e3b341; }
+    a.door.primary span { color: #3d3420; }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 14px; }
+    button.ghost, a.ghost {
+      background: transparent; color: #f4f1e8; border: 1px solid #3a4034;
+      text-decoration: none; padding: 10px 16px; display: inline-block; font: inherit; cursor: pointer;
+    }
     button:disabled { opacity: 0.55; cursor: wait; }
     .clock { font-variant-numeric: tabular-nums; color: #b7b2a6; }
     .stage {
@@ -78,15 +84,25 @@
     .note { margin-top: 18px; color: #b7b2a6; }
     a { color: #e3b341; }
     .err { color: #ff6b6b; }
+    @media (max-width: 640px) { .doors { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <main>
     <p class="kicker">Rebind · ETHGlobal Tokyo 2026</p>
-    <h1>A revoked agent key fails on the next paid request. A new key waits for a human proof.</h1>
-    <p class="lead" id="lead">Seven beats. The paygate runs them for real: foil still grants after revoke, win denies, and a client that claims “validated” does not get the resource.</p>
+    <h1>A revoked key should fail the next payment.</h1>
+    <p class="lead" id="lead">Run that loop yourself, or watch the server do it in ninety seconds.</p>
+    <div class="doors">
+      <a class="door primary" href="/desk">
+        <strong>Run a key yourself</strong>
+        <span>Create it, pay, revoke it, then approve the new one.</span>
+      </a>
+      <button class="door" id="play" type="button">
+        <strong>Watch the 90-second cut</strong>
+        <span>Foil still pays. The fixed server refuses.</span>
+      </button>
+    </div>
     <div class="row">
-      <button id="play" type="button">Play the 90-second cut</button>
       <button id="skip" class="ghost" type="button" hidden>Show the result</button>
       <span class="clock" id="clock">0:00 / 1:30</span>
     </div>
@@ -96,7 +112,7 @@
       <p>Press play. The server registers K, revokes it, rotates to a new key, and refuses to treat a client claim as a World proof.</p>
     </section>
     <ol id="rail"></ol>
-    <p class="note" id="note">Operator desk, if you want to drive one key by hand: <a href="/desk">/desk</a>.</p>
+    <p class="note" id="note"></p>
   </main>
   <script>
     const play = document.getElementById("play");
@@ -201,7 +217,7 @@
         note.textContent = film.note + " ";
         const desk = document.createElement("a");
         desk.href = "/desk";
-        desk.textContent = "Operator desk";
+        desk.textContent = "Run a key yourself";
         note.appendChild(desk);
         skip.hidden = false;
         play.hidden = true;

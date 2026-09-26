@@ -14,10 +14,18 @@ export interface DurableGrant {
   worldRebind: string | null;
 }
 
+/** What the human needs to see. The device code itself stays out of this object. */
+export interface WorldPrompt {
+  userCode: string;
+  verificationUri: string;
+  verificationUriComplete: string;
+}
+
 export interface DurableState {
   agents: AgentRecord[];
   rebinds: RebindRequest[];
   deviceCodes: Record<string, string>;
+  prompts: Record<string, WorldPrompt>;
   grants: DurableGrant[];
 }
 
@@ -45,6 +53,7 @@ export function openState(token: string, secret: string): DurableState | null {
       return null;
     }
     if (typeof parsed.deviceCodes !== "object" || parsed.deviceCodes === null) return null;
+    if (typeof parsed.prompts !== "object" || parsed.prompts === null) parsed.prompts = {};
     return parsed;
   } catch {
     return null;
