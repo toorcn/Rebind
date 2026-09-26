@@ -114,15 +114,11 @@ export function walletHomeEmbed(status: ChainStatus): { section: string; tail: s
     #wallet-desk .role { position: relative; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 1px 2px rgba(17, 26, 61, 0.04); }
     #wallet-desk .role-name { display: flex; align-items: center; gap: 8px; margin: 0; font: 500 11px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
     #wallet-desk .role-name i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-    #wallet-desk .role.worker .role-name i { background: var(--coral); }
-    #wallet-desk .role.finish { background: linear-gradient(135deg, rgba(34, 179, 122, 0.08), rgba(88, 105, 235, 0.06)); border-color: rgba(34, 179, 122, 0.25); }
     #wallet-desk .role.finish .role-name i { background: var(--ok-bright); }
     #wallet-desk .role ol { list-style: none; display: grid; gap: 7px; margin: 12px 0 0; padding: 0; counter-reset: s; }
     #wallet-desk .role li { counter-increment: s; display: flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 500; color: var(--text); }
     #wallet-desk .role li::before { content: counter(s); flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--surface-3); color: var(--muted); font: 600 10.5px/1 var(--mono); }
-    #wallet-desk .role.buyer li::before { background: var(--accent-soft); color: var(--accent); }
-    #wallet-desk .role.worker li::before { background: rgba(234, 107, 67, 0.12); color: var(--coral); }
-    #wallet-desk .role.finish li::before { background: var(--ok-soft); color: var(--ok); }
+    #wallet-desk .role li::before { background: var(--accent-soft); color: var(--accent); }
     #wallet-desk .role.finish li:last-child { color: var(--ok); }
     #wallet-desk .card-head { display: flex; align-items: center; gap: 12px; }
     #wallet-desk .card-head .label { margin: 0; }
@@ -184,9 +180,9 @@ export function walletHomeEmbed(status: ChainStatus): { section: string; tail: s
       margin: 0 0 20px;
       padding: 12px 14px 12px 32px;
       position: relative;
-      border: 1px solid rgba(246, 180, 14, 0.4);
+      border: 1px solid rgba(88, 105, 235, 0.28);
       border-radius: 14px;
-      background: var(--sun-soft);
+      background: var(--accent-soft);
       color: var(--text-2);
       font-size: 13.5px;
     }

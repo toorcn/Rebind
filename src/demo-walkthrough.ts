@@ -80,14 +80,13 @@ export function walkthroughEmbed(): { section: string; tail: string } {
       #demo-detail { color: var(--text-2); }
       .demo-cast { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 13px; }
       .demo-cast span { padding: 5px 10px; border-radius: 99px; font-weight: 500; }
-      .demo-cast .buyer { background: var(--accent-soft); color: var(--accent); }
-      .demo-cast .worker { background: rgba(234, 107, 67, 0.12); color: #c4532f; }
+      .demo-cast span { background: var(--surface-3); color: var(--navy); }
       .demo-cast i { font-style: normal; color: var(--faint); }
       .demo-cast em { font-style: normal; margin-left: 4px; color: var(--muted); }
       .demo-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0 4px; }
       .demo-stats > div { padding: 12px 14px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); }
       .demo-stats small { display: flex; align-items: center; gap: 7px; font: 500 10.5px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-      .demo-stats small::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--sun); }
+      .demo-stats small::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--accent); }
       .demo-stats .paid small::before { background: var(--ok-bright); }
       .demo-stats b { display: block; margin-top: 6px; font: 400 2rem/1 var(--serif); color: var(--navy); font-variant-numeric: tabular-nums; }
       .demo-stats .paid b { color: var(--ok); }

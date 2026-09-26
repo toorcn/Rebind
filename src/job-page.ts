@@ -458,7 +458,7 @@ export function renderJobPage(input: JobPageInput): string {
     @view-transition { navigation: auto; }
     :root {
       color-scheme: light;
-      /* ETHGlobal Tokyo 2026: night navy, neon yellow, sky, coral, periwinkle, lavender */
+      /* Navy ink, one periwinkle accent, green and red only for status. */
       --bg: #f5f6fd;
       --surface: #ffffff;
       --surface-2: #fafbff;
@@ -473,13 +473,10 @@ export function renderJobPage(input: JobPageInput): string {
       --navy-2: #294481;
       --accent: #5869eb;
       --accent-soft: rgba(88, 105, 235, 0.1);
-      --coral: #ea6b43;
-      --sun: #f6b40e;
-      --sun-ink: #9a6a00;
-      --sun-soft: rgba(246, 180, 14, 0.14);
-      --sky: #5bbfe8;
-      --mint: #b7e9d4;
-      --pink: #f1b3e5;
+      --coral: var(--accent);
+      --sun: var(--accent);
+      --sun-ink: var(--accent);
+      --sun-soft: var(--accent-soft);
       --ok: #138a5c;
       --ok-bright: #22b37a;
       --ok-soft: rgba(34, 179, 122, 0.11);
@@ -525,10 +522,7 @@ export function renderJobPage(input: JobPageInput): string {
       pointer-events: none;
       z-index: 0;
       background:
-        radial-gradient(620px 380px at 88% 6%, rgba(244, 188, 151, 0.42), transparent 70%),
-        radial-gradient(520px 360px at 70% 38%, rgba(241, 179, 229, 0.22), transparent 70%),
-        radial-gradient(640px 420px at 4% 12%, rgba(91, 191, 232, 0.2), transparent 70%),
-        radial-gradient(520px 320px at 28% 60%, rgba(183, 233, 212, 0.28), transparent 70%);
+        radial-gradient(900px 520px at 85% -10%, rgba(88, 105, 235, 0.07), transparent 70%);
     }
     body::after {
       content: "";
@@ -615,7 +609,7 @@ export function renderJobPage(input: JobPageInput): string {
       text-transform: uppercase;
       color: var(--muted);
     }
-    .eyebrow::before { content: ""; width: 22px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--coral), var(--sun)); }
+    .eyebrow::before { content: ""; width: 22px; height: 2px; border-radius: 2px; background: var(--accent); }
     h1 {
       margin: 0;
       font-family: var(--serif);
@@ -625,13 +619,7 @@ export function renderJobPage(input: JobPageInput): string {
       letter-spacing: -0.025em;
       color: var(--navy);
     }
-    h1 em {
-      font-style: normal;
-      background: linear-gradient(95deg, var(--coral) 10%, #f08f2e 55%, #e9a800 95%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
+    h1 em { font-style: normal; color: var(--accent); }
     .deck { margin: 24px 0 0; color: var(--text-2); max-width: 34rem; font-size: 1.06rem; line-height: 1.6; }
     .hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
 
@@ -649,7 +637,7 @@ export function renderJobPage(input: JobPageInput): string {
       inset: -1px;
       border-radius: inherit;
       padding: 1px;
-      background: linear-gradient(140deg, rgba(88, 105, 235, 0.55), rgba(183, 233, 212, 0.6) 40%, transparent 70%);
+      background: none;
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
@@ -793,7 +781,7 @@ export function renderJobPage(input: JobPageInput): string {
       position: absolute;
       inset: 0 0 auto;
       height: 3px;
-      background: linear-gradient(90deg, var(--sky), var(--accent) 35%, var(--pink) 65%, var(--coral) 85%, var(--sun));
+      background: none;
     }
     .step {
       margin: 0;
@@ -982,7 +970,7 @@ export function renderJobPage(input: JobPageInput): string {
     .notice p { margin: 0; font-size: 13.5px; color: var(--text-2); }
     .notice .notice-title { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
     .notice-icon svg { width: 20px; height: 20px; display: block; }
-    .notice.wait { background: var(--sun-soft); border-color: rgba(246, 180, 14, 0.4); }
+    .notice.wait { background: var(--accent-soft); border-color: rgba(88, 105, 235, 0.28); }
     .notice.wait .notice-title, .notice.wait .notice-icon { color: var(--sun-ink); }
     .notice.bad { background: var(--bad-soft); border-color: rgba(214, 61, 85, 0.3); }
     .notice.bad .notice-title, .notice.bad .notice-icon { color: var(--bad); }
@@ -1082,7 +1070,8 @@ export function renderJobPage(input: JobPageInput): string {
     footer a:hover { color: var(--navy); }
 
     /* motion */
-    .reveal { animation: rise 0.8s var(--ease) both; animation-delay: calc(var(--d, 0) * 70ms); }
+    .reveal { animation: rise 1.1s var(--ease) both; animation-delay: calc(var(--d, 0) * 90ms); }
+    .reveal[data-reveal-pending] { animation-play-state: paused; }
     @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
     @keyframes fade-out { to { opacity: 0; transform: translateY(-6px); } }
     @keyframes grow { to { width: var(--w); } }
@@ -1097,6 +1086,7 @@ export function renderJobPage(input: JobPageInput): string {
 
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.001ms !important; animation-delay: 0s !important; transition-duration: 0.001ms !important; }
+      .reveal[data-reveal-pending] { animation-play-state: running; }
       html { scroll-behavior: auto; }
     }
 
@@ -1134,8 +1124,8 @@ export function renderJobPage(input: JobPageInput): string {
       align-items: center;
       margin-top: 28px;
       padding: 12px 14px 12px 12px;
-      background: var(--sun-soft);
-      border: 1px solid rgba(246, 180, 14, 0.4);
+      background: var(--surface);
+      border: 1px solid var(--line-2);
       border-radius: 14px;
       font-size: 13.5px;
     }
@@ -1145,8 +1135,8 @@ export function renderJobPage(input: JobPageInput): string {
       gap: 6px;
       padding: 5px 10px;
       border-radius: 99px;
-      background: var(--sun);
-      color: #3b2a00;
+      background: var(--navy);
+      color: #fff;
       font: 600 11px/1 var(--mono);
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -1169,7 +1159,7 @@ export function renderJobPage(input: JobPageInput): string {
       inset: -1px;
       border-radius: inherit;
       padding: 1px;
-      background: linear-gradient(140deg, rgba(88, 105, 235, 0.55), rgba(183, 233, 212, 0.6) 40%, transparent 70%);
+      background: none;
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
@@ -1190,7 +1180,6 @@ export function renderJobPage(input: JobPageInput): string {
       font: 600 13px/1 var(--mono);
     }
     .plan li.pay > span { background: var(--ok-soft); color: var(--ok); }
-    .plan li.hold > span { background: var(--sun-soft); color: var(--sun-ink); }
     .plan strong { display: block; font-size: 14.5px; font-weight: 600; color: var(--navy); }
     .plan small { display: block; margin-top: 1px; font-size: 13px; color: var(--muted); }
     .needs li:nth-child(n) .need-icon.ok { background: var(--ok-soft); color: var(--ok); }
@@ -1200,7 +1189,12 @@ export function renderJobPage(input: JobPageInput): string {
     mark {
       color: var(--navy);
       font-weight: 500;
-      background: linear-gradient(transparent 58%, rgba(246, 180, 14, 0.38) 58%, rgba(246, 180, 14, 0.38) 92%, transparent 92%);
+      background: none;
+      font-weight: 600;
+      text-decoration: underline;
+      text-decoration-color: rgba(88, 105, 235, 0.45);
+      text-decoration-thickness: 2px;
+      text-underline-offset: 4px;
       padding: 0 2px;
     }
     .needs { margin-top: 26px; }
@@ -1219,8 +1213,6 @@ export function renderJobPage(input: JobPageInput): string {
       color: var(--text);
     }
     .need-icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
-    .needs li:nth-child(2) .need-icon { background: rgba(234, 107, 67, 0.12); color: var(--coral); }
-    .needs li:nth-child(3) .need-icon { background: var(--sun-soft); color: var(--sun-ink); }
     .need-icon svg { width: 15px; height: 15px; }
     .demo-entry {
       display: flex;
@@ -1328,7 +1320,7 @@ export function renderJobPage(input: JobPageInput): string {
   <header class="nav">
     <div class="wrap">
       <a class="brand" href="/" aria-label="Rebind home">
-        <svg viewBox="0 0 26 18" aria-hidden="true"><circle cx="9" cy="9" r="7.5" fill="none" stroke="#ea6b43" stroke-width="1.8"/><circle cx="17" cy="9" r="7.5" fill="none" stroke="#5869eb" stroke-width="1.8"/></svg>
+        <svg viewBox="0 0 26 18" aria-hidden="true"><circle cx="9" cy="9" r="7.5" fill="none" stroke="#1c2952" stroke-width="1.8"/><circle cx="17" cy="9" r="7.5" fill="none" stroke="#5869eb" stroke-width="1.8"/></svg>
         <span>Rebind</span>
       </a>
       <nav aria-label="Primary">
@@ -1462,6 +1454,28 @@ export function renderJobPage(input: JobPageInput): string {
     </div>
   </footer>
 
+  <script>
+    (() => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(({ target, isIntersecting }) => {
+          if (!isIntersecting) return;
+          target.removeAttribute("data-reveal-pending");
+          observer.unobserve(target);
+        });
+      });
+      document.querySelectorAll(".reveal").forEach((node) => {
+        if (node.getBoundingClientRect().top < window.innerHeight) return;
+        node.setAttribute("data-reveal-pending", "");
+        node.style.animationDelay = "0s";
+        observer.observe(node);
+        node.addEventListener("focusin", () => {
+          node.removeAttribute("data-reveal-pending");
+          observer.unobserve(node);
+        }, { once: true });
+      });
+    })();
+  </script>
   ${isDemo ? `<script>
     (() => {
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

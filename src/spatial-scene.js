@@ -25,7 +25,7 @@ export function mountScene(root, initial) {
   const fill = new THREE.DirectionalLight(0xd4e4ff, 1.5); fill.position.set(4,3,-4); scene.add(fill);
   const materials = {};
   function mat(name,color,metalness=0) { materials[name] = new THREE.MeshStandardMaterial({ color, roughness: .43, metalness }); return materials[name]; }
-  const boardMat = mat('board',0xe8eaf8), edgeMat = mat('edge',0xf7f8ff), humanMat = mat('human',0xea8868), humanBMat = mat('humanB',0x8294da), agentMat = mat('agent',0xe2e5f7), faceMat = mat('face',0x25355e), eyeMat = mat('eye',0xe9eadb), vaultMat = mat('vault',0x6376b5), doorMat = mat('door',0xa0abe0), coinMat = mat('coin',0xe3b464,.58), wireMat = mat('wire',0xcf8c6d), wireBMat = mat('wireB',0x8299b0), darkMat = mat('dark',0x33436d), trackMat = mat('track',0xbac2df);
+  const boardMat = mat('board',0xe8eaf8), edgeMat = mat('edge',0xf7f8ff), humanMat = mat('human',0x5869eb), humanBMat = mat('humanB',0x2a3a6e), agentMat = mat('agent',0xe2e5f7), faceMat = mat('face',0x25355e), eyeMat = mat('eye',0xe9eadb), vaultMat = mat('vault',0x6376b5), doorMat = mat('door',0xa0abe0), coinMat = mat('coin',0xd9ddee,.58), wireMat = mat('wire',0x8f9bd6), wireBMat = mat('wireB',0x8299b0), darkMat = mat('dark',0x33436d), trackMat = mat('track',0xbac2df);
   function mesh(geo, material, parent, x=0,y=0,z=0) { const o = new THREE.Mesh(geo,material); o.position.set(x,y,z); o.castShadow=true; o.receiveShadow=true; parent.add(o); return o; }
   function box(w,h,d,r,material,parent,x=0,y=0,z=0) {
     const s = new THREE.Shape(), a=w/2-r, b=h/2-r, c=Math.min(r,.08);
