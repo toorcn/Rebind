@@ -554,6 +554,8 @@ export function renderJobPage(input: JobPageInput): string {
       white-space: nowrap;
     }
     .wallet-connect:hover { background: var(--navy-2); }
+    .wallet-connect.ghost { background: var(--surface); color: var(--navy); }
+    .wallet-connect.ghost:hover { background: var(--surface-3); }
     .net {
       margin-left: auto;
       display: inline-flex;
@@ -1133,7 +1135,8 @@ export function renderJobPage(input: JobPageInput): string {
         <a href="/desk">Desk</a>
       </nav>
       <div class="nav-end">
-        <button class="wallet-connect" id="connect" type="button">Connect wallet</button>
+        <button class="wallet-connect" id="connect" type="button">Scan with MetaMask</button>
+        <button class="wallet-connect ghost" id="connect-browser" type="button">Browser wallet</button>
         <span class="net" id="net" data-state="idle"><i></i><span>Checking chain…</span></span>
       </div>
     </div>

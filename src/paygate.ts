@@ -609,6 +609,7 @@ export function createApp(registry: AgentBookRegistry, options: AppOptions = {})
   const jobPrompts = new Map<string, WorldPrompt>();
   const stateSecret = process.env.WORLD_CLIENT_SECRET ?? "";
 
+  app.use("/vendor", express.static(join(__dirname, "..", "public")));
   app.use(express.json());
   if (stateSecret) {
     rememberDesk(app, registry, desk, deviceCodes, prompts, grants, pool, jobDevices, jobPrompts, stateSecret);

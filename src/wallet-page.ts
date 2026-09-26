@@ -28,7 +28,7 @@ export function walletHomeEmbed(status: ChainStatus): { section: string; tail: s
       <h2>Your wallet</h2>
       <p>${ready ? escapeHtml(status.network) : "Wallet"}</p>
     </div>
-    <p class="hint">This stays on the same page as the desk above. You sign mint, escrow, and delivery. World ID is written onto the address that signs. The hook pays two humans and reverts when both wallets are one person. DemoUSD is a test token.</p>
+    <p class="hint">Scan with MetaMask opens a code for the phone app. Browser wallet uses an extension already in this window. Either way you sign mint, escrow, and delivery on this page. World ID is written onto the address that signs. DemoUSD is a test token.</p>
     ${ready ? "" : `<p class="banner">This server has no World Chain deployment configured, so the wallet buttons stay off.</p>`}
     <div class="wallet-grid">
       <section class="card">

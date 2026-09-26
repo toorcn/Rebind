@@ -12,16 +12,19 @@
     "self-pay": "tsx src/self-pay.ts",
     "chain-self-pay": "tsx src/chain-self-pay.ts",
     "chain-artifacts": "node contracts/gen-artifacts.mjs",
+    "bundle:metamask": "esbuild src/metamask-entry.ts --bundle --format=esm --platform=browser --target=es2022 --outfile=public/metamask-connect.js",
     "typecheck": "tsc --noEmit"
   },
   "license": "ISC",
   "dependencies": {
+    "@metamask/connect-evm": "^2.1.1",
     "express": "^5.2.1",
     "viem": "^2.56.9"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.3",
+    "esbuild": "^0.28.2",
     "tsx": "^4.23.15",
     "typescript": "~5.9.2"
   }

@@ -1,7 +1,7 @@
 (function () {
   var configNode = document.getElementById("rebind-config");
   var cfg = JSON.parse(configNode ? configNode.textContent || "{}" : "{}");
-  var state = { account: "", jobId: "", userCode: "", busy: false };
+  var state = { account: "", jobId: "", userCode: "", busy: false, provider: null };
 
   function $(id) {
     return document.getElementById(id);
@@ -15,7 +15,7 @@
     if (scroll && wasHidden) node.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function ethereum() {
+  function injectedProvider() {
     var eth = window.ethereum;
     if (!eth) return null;
     if (eth.providers && eth.providers.length) {
@@ -27,6 +27,34 @@
       return named || eth.providers[0];
     }
     return eth;
+  }
+
+  function ethereum() {
+    return state.provider || injectedProvider();
+  }
+
+  function qrOptions() {
+    return {
+      chainIdHex: cfg.chainIdHex || "0x12c1",
+      rpcUrl: cfg.rpcUrl || "https://worldchain-sepolia.g.alchemy.com/public",
+    };
+  }
+
+  function adoptSession(accounts, provider) {
+    state.provider = provider || null;
+    state.account = accounts && accounts[0] ? accounts[0] : "";
+    if (!state.account) throw new Error("The wallet returned no account.");
+    $("connect").textContent = short(state.account);
+    if (provider && provider.on) {
+      provider.on("accountsChanged", function (next) {
+        state.account = next && next[0] ? next[0] : "";
+        $("connect").textContent = state.account ? short(state.account) : "Scan with MetaMask";
+        if (state.account) showDesk(false);
+      });
+      provider.on("chainChanged", function () {
+        if (state.account) run(refreshAccount, "wallet-status");
+      });
+    }
   }
 
   function esc(value) {
@@ -118,7 +146,7 @@
 
   async function ensureChain() {
     var eth = ethereum();
-    if (!eth) throw new Error("This browser has no wallet. Install MetaMask, Rabby, or Coinbase Wallet, then reload.");
+    if (!eth) throw new Error("Scan with MetaMask, or use a browser wallet, before signing.");
     if (!cfg.configured) throw new Error("This server has no chain configured.");
     var current = await eth.request({ method: "eth_chainId" });
     if (String(current).toLowerCase() === String(cfg.chainIdHex).toLowerCase()) return;
@@ -163,22 +191,34 @@
     return account;
   }
 
-  async function connect() {
-    showDesk(true);
-    var eth = ethereum();
-    if (!eth) {
-      setStatus("wallet-status", "This browser has no wallet. Install MetaMask, Rabby, or Coinbase Wallet, then reload.", "bad");
-      return;
-    }
-    var accounts = await eth.request({ method: "eth_requestAccounts" });
-    state.account = accounts && accounts[0] ? accounts[0] : "";
-    if (!state.account) throw new Error("The wallet returned no account.");
-    $("connect").textContent = short(state.account);
+  async function finishConnect() {
     if (cfg.configured) await ensureChain();
     await refreshAccount();
     var pending = await api("/chain/world/" + state.account);
     if (pending.pending) state.userCode = pending.userCode || "";
     if (state.jobId) await loadJob(state.jobId);
+  }
+
+  async function connect() {
+    showDesk(true);
+    setStatus("wallet-status", "Open MetaMask on your phone and scan the code.", "");
+    var mod = await import("/vendor/metamask-connect.js");
+    var result = await mod.connectWithQr(qrOptions());
+    adoptSession(result.accounts, result.provider);
+    await finishConnect();
+  }
+
+  async function connectBrowser() {
+    showDesk(true);
+    var eth = injectedProvider();
+    if (!eth) {
+      setStatus("wallet-status", "This browser has no wallet extension. Scan with MetaMask instead.", "bad");
+      return;
+    }
+    state.provider = eth;
+    var accounts = await eth.request({ method: "eth_requestAccounts" });
+    adoptSession(accounts, eth);
+    await finishConnect();
   }
 
   function timeLeft(expiredAt) {
@@ -442,6 +482,11 @@
   $("connect").addEventListener("click", function () {
     run(connect, "wallet-status");
   });
+  if ($("connect-browser")) {
+    $("connect-browser").addEventListener("click", function () {
+      run(connectBrowser, "wallet-status");
+    });
+  }
   $("switch-chain").addEventListener("click", function () {
     run(async function () {
       await ensureChain();
@@ -476,7 +521,7 @@
   if (eth && eth.on) {
     eth.on("accountsChanged", function (accounts) {
       state.account = accounts && accounts[0] ? accounts[0] : "";
-      $("connect").textContent = state.account ? short(state.account) : "Connect wallet";
+      $("connect").textContent = state.account ? short(state.account) : "Scan with MetaMask";
       if (state.account) {
         showDesk(false);
         run(async function () {
@@ -495,19 +540,27 @@
   });
 
   async function restore() {
-    var provider = ethereum();
+    try {
+      var mod = await import("/vendor/metamask-connect.js");
+      var session = await mod.restoreQrSession(qrOptions());
+      if (session && session.accounts && session.accounts[0]) {
+        adoptSession(session.accounts, session.provider);
+        showDesk(false);
+        if (cfg.configured) await refreshAccount();
+        if (state.jobId) await loadJob(state.jobId);
+        return;
+      }
+    } catch (err) {
+      void err;
+    }
+    var provider = injectedProvider();
     if (!provider) return;
     try {
       var accounts = await provider.request({ method: "eth_accounts" });
       if (!accounts || !accounts[0]) return;
-      state.account = accounts[0];
-      $("connect").textContent = short(state.account);
+      adoptSession(accounts, provider);
       showDesk(false);
-      if (cfg.configured) {
-        await refreshAccount();
-        var pending = await api("/chain/world/" + state.account);
-        if (pending.pending) state.userCode = pending.userCode || "";
-      }
+      if (cfg.configured) await refreshAccount();
       if (state.jobId) await loadJob(state.jobId);
     } catch (err) {
       void err;
