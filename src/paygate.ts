@@ -4,6 +4,7 @@ import { join } from "path";
 import express, { type Express, type Request, type Response } from "express";
 import { openState, sealState, type DurableState, type WorldPrompt } from "./durable-state";
 import { mountChainDesk } from "./chain";
+import { renderFlowPage } from "./flow-page";
 import { mountJobDesk } from "./jobs";
 import { JobPool } from "./pool";
 import { RebindDesk, type RebindRequest } from "./rebind";
@@ -616,6 +617,10 @@ export function createApp(registry: AgentBookRegistry, options: AppOptions = {})
 
   app.get("/film", (_req: Request, res: Response) => {
     res.type("html").send(readFilmPage());
+  });
+
+  app.get("/flow", (_req: Request, res: Response) => {
+    res.type("html").send(renderFlowPage());
   });
 
   app.get("/desk", (req: Request, res: Response) => {

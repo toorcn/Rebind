@@ -12,7 +12,7 @@ npm run dev
 
 Open http://127.0.0.1:43210 . `self-pay` prints `SAME_HUMAN`, `CLIENT_CLAIM_IGNORED`, `NOT_A_WORLD_PROOF`, and `PAYOUT_RELEASED`, then `SELF_PAY_PASSED`.
 
-The earlier revoke desk is still at `/desk`. The 90-second cut is at `/film`.
+The earlier revoke desk is still at `/desk`. The 90-second cut is at `/film`. The animated settlement, separate from the pool, is at `/flow`.
 
 ## On-chain settlement
 

@@ -393,7 +393,7 @@ export function renderJobPage(input: JobPageInput): string {
 </head>
 <body>
   <main>
-    <p class="kicker">Rebind · job pool</p>
+    <p class="kicker">Rebind · job pool · <a href="/flow">Watch the flow</a></p>
     <h1>The pool pays two different humans.</h1>
     <p class="deck">One person can run the buyer and the worker and finish the job. The credits stay in escrow, and that sale does not count. A second person proves the buyer, and the same delivery gets paid.</p>
     <section class="ledger" aria-label="Pool balances">
@@ -433,7 +433,7 @@ export function renderJobPage(input: JobPageInput): string {
       <button class="ghost" id="play-chain" type="button">Run the on-chain take</button>
       <div class="beats" id="chain-stage"></div>
     </section>
-    <p class="foot">Earlier cut: <a href="/desk">revoke a key</a> · <a href="/film">90-second film</a></p>
+    <p class="foot">Earlier cut: <a href="/desk">revoke a key</a> · <a href="/film">90-second film</a> · <a href="/flow">watch the flow</a></p>
   </main>
   <script>
     const play = document.getElementById("play-take");
