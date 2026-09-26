@@ -30,6 +30,15 @@ npm run chain-self-pay    # boots anvil, deploys, runs the two-job take
 
 `chain-self-pay` prints `ESCROW_LOCKED`, `SAME_HUMAN` (a mined, failed `complete()`), `REFUNDED`, `DISTINCT_HUMANS`, then `CHAIN_SELF_PAY_PASSED`. The desk's on-chain panel (`POST /demo/chain-self-pay`) runs the same take against the chain named by `CHAIN_RPC_URL` + `CHAIN_REGISTRAR_KEY` (optional `CHAIN_CLIENT_KEY`, `CHAIN_PROVIDER_KEY`, `CHAIN_ID`, `CHAIN_NETWORK`, `CHAIN_EXPLORER`, and the four `CHAIN_*_ADDRESS` values to attach instead of deploy). With none set, the route answers 501 and the panel says so.
 
+Production settles on World Chain Sepolia (chain 4801). The failed same-human settlement is [this transaction](https://worldchain-sepolia.explorer.alchemy.com/tx/0x9b41dda60fb60487b40cc94ebd13ea80332367ff20a1e49672dac55eae337070). The two-human payout is [this one](https://worldchain-sepolia.explorer.alchemy.com/tx/0x733d34f143256e05140cb4b1735c909a3bb11c975a2d04c03911d4338f55d3af).
+
+| Contract | Address |
+| --- | --- |
+| DemoUSD | `0xb904Fa786eA5f8267e808b6CbE5e2702e5dAf30a` |
+| HumanRegistry | `0xf026A0268f9A5460cACF135eB5Bd67365b661a06` |
+| TwoHumansHook | `0x2B99A95AD8896F46E62B5C796074C014cB7fbC99` |
+| ACP core | `0x95fcb6f45700160536897B3596BE7C5843BDd5A7` |
+
 ## Revoke desk
 
 Default `npm run dev` is **win** mode: a revoked key is denied on every grant, and a rotated key pays only after the server validates a rebind.

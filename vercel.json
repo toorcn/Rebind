@@ -1,7 +1,7 @@
 {
   "functions": {
     "src/server.ts": {
-      "maxDuration": 30,
+      "maxDuration": 120,
       "includeFiles": "public/**"
     }
   }

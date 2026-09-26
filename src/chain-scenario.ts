@@ -199,7 +199,7 @@ export async function runChainScenario(config: ChainScenarioConfig): Promise<Cha
     for (const account of [clientAccount, providerAccount]) {
       const funding = await registrarWallet.sendTransaction({
         to: account.address,
-        value: parseEther("0.01"),
+        value: parseEther("0.0001"),
       });
       await publicClient.waitForTransactionReceipt({ hash: funding });
     }
