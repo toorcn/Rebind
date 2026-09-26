@@ -7,6 +7,14 @@
     return document.getElementById(id);
   }
 
+  function showDesk(scroll) {
+    var node = $("wallet-desk");
+    if (!node) return;
+    var wasHidden = node.hidden;
+    node.hidden = false;
+    if (scroll && wasHidden) node.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   function ethereum() {
     var eth = window.ethereum;
     if (!eth) return null;
@@ -156,6 +164,7 @@
   }
 
   async function connect() {
+    showDesk(true);
     var eth = ethereum();
     if (!eth) {
       setStatus("wallet-status", "This browser has no wallet. Install MetaMask, Rabby, or Coinbase Wallet, then reload.", "bad");
@@ -218,22 +227,22 @@
     }
     if (state.userCode) {
       html += '<p class="hint">Approve this code in World App, then come back and sign.</p>';
-      html += '<div class="code">' + esc(state.userCode) + "</div>";
+      html += '<div class="wallet-code">' + esc(state.userCode) + "</div>";
       html += '<p><a href="https://world.org/download" target="_blank" rel="noreferrer">Open World App</a></p>';
     }
     html += '<div class="actions">';
     if (worker && job.status === "Funded" && !expired) {
-      html += '<button type="button" id="deliver">Submit delivery</button>';
+      html += '<button class="btn primary" type="button" id="deliver">Submit delivery</button>';
     }
     if ((buyer || worker) && !(buyer ? job.clientProven : job.providerProven)) {
-      html += '<button type="button" id="prove">Prove this wallet with World ID</button>';
-      html += '<button type="button" class="ghost" id="check-world">Sign and check World App</button>';
+      html += '<button class="btn primary" type="button" id="prove">Prove this wallet with World ID</button>';
+      html += '<button class="btn ghost" type="button" id="check-world">Sign and check World App</button>';
     }
     if (job.status === "Submitted" && job.humans !== "waiting") {
-      html += '<button type="button" id="settle">' + (job.humans === "same" ? "Attempt settlement" : "Settle on-chain") + "</button>";
+      html += '<button class="btn primary" type="button" id="settle">' + (job.humans === "same" ? "Attempt settlement" : "Settle on-chain") + "</button>";
     }
     if (buyer && expired && (job.status === "Funded" || job.status === "Submitted")) {
-      html += '<button type="button" id="refund">Claim refund</button>';
+      html += '<button class="btn ghost" type="button" id="refund">Claim refund</button>';
     }
     html += "</div>";
     $("job-body").innerHTML = html;
@@ -469,6 +478,7 @@
       state.account = accounts && accounts[0] ? accounts[0] : "";
       $("connect").textContent = state.account ? short(state.account) : "Connect wallet";
       if (state.account) {
+        showDesk(false);
         run(async function () {
           await refreshAccount();
           if (state.jobId) await loadJob(state.jobId);
@@ -483,6 +493,27 @@
   refreshBoard().catch(function (err) {
     $("board").innerHTML = '<p class="hint">' + explain(err) + "</p>";
   });
+
+  async function restore() {
+    var provider = ethereum();
+    if (!provider) return;
+    try {
+      var accounts = await provider.request({ method: "eth_accounts" });
+      if (!accounts || !accounts[0]) return;
+      state.account = accounts[0];
+      $("connect").textContent = short(state.account);
+      showDesk(false);
+      if (cfg.configured) {
+        await refreshAccount();
+        var pending = await api("/chain/world/" + state.account);
+        if (pending.pending) state.userCode = pending.userCode || "";
+      }
+      if (state.jobId) await loadJob(state.jobId);
+    } catch (err) {
+      void err;
+    }
+  }
+  restore();
 
   try {
     var saved = localStorage.getItem("rebind.job");

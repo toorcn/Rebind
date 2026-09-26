@@ -2,7 +2,6 @@ import type { Express, Request, Response } from "express";
 import type { WorldPrompt } from "./durable-state";
 import { chainStatus } from "./chain";
 import { renderJobPage } from "./job-page";
-import { renderWalletPage } from "./wallet-page";
 import { JobPool, WORLD_ISSUER, type Seat } from "./pool";
 import { runSelfPay } from "./self-pay-run";
 import { pullValidatedSubject, startDeviceGrant } from "./world-oidc";
@@ -67,23 +66,24 @@ function sendJob(req: Request, res: Response, status: number, body: unknown, fla
     return;
   }
   const suffix = flash ? `?flash=${flash}` : "";
-  res.redirect(`/credits${suffix}`);
+  res.redirect(`/${suffix}`);
 }
 
 export function mountJobDesk(app: Express, hooks: JobDeskHooks): void {
-  app.get("/", (_req: Request, res: Response) => {
-    res.type("html").send(renderWalletPage(chainStatus()));
-  });
-
-  app.get("/credits", (req: Request, res: Response) => {
+  app.get("/", (req: Request, res: Response) => {
     res.type("html").send(
       renderJobPage({
         jobs: hooks.pool.list(),
         ledger: hooks.pool.ledger(),
         prompts: hooks.jobPrompts,
         flash: flashOf(req.query.flash),
+        chain: chainStatus(),
       })
     );
+  });
+
+  app.get("/credits", (_req: Request, res: Response) => {
+    res.redirect("/");
   });
 
   app.get("/pool", (_req: Request, res: Response) => {
@@ -185,7 +185,7 @@ export function mountJobDesk(app: Express, hooks: JobDeskHooks): void {
         verificationUriComplete: live.verificationUriComplete ?? live.verificationUri,
       });
       if (!wantsJson(req)) {
-        res.redirect("/credits");
+        res.redirect("/");
         return;
       }
       res.status(201).json({

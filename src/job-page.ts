@@ -1,11 +1,14 @@
+import type { ChainStatus } from "./chain";
 import type { WorldPrompt } from "./durable-state";
 import { focusJob, type Job, type Ledger, type Seat, type SettleReason } from "./pool";
+import { walletHomeEmbed } from "./wallet-page";
 
 export interface JobPageInput {
   jobs: Job[];
   ledger: Ledger;
   prompts: Map<string, WorldPrompt>;
   flash: string;
+  chain: ChainStatus;
 }
 
 type Moment =
@@ -427,6 +430,7 @@ export function renderJobPage(input: JobPageInput): string {
     })
     .join("");
   const claim = focus ? claimReceipt(focus) : "";
+  const wallet = walletHomeEmbed(input.chain);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -538,6 +542,18 @@ export function renderJobPage(input: JobPageInput): string {
     .nav nav { display: flex; gap: 4px; }
     .nav nav a { color: var(--muted); font-size: 14px; padding: 6px 10px; border-radius: 8px; transition: color 0.2s, background 0.2s; }
     .nav nav a:hover { color: var(--text); background: rgba(28, 41, 82, 0.05); }
+    .nav-end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .wallet-connect {
+      border: 1px solid var(--line-2);
+      background: var(--navy);
+      color: #fff;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font: 600 13px/1 var(--sans);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .wallet-connect:hover { background: var(--navy-2); }
     .net {
       margin-left: auto;
       display: inline-flex;
@@ -1076,6 +1092,7 @@ export function renderJobPage(input: JobPageInput): string {
       .wrap { padding: 0 16px; }
       .nav .wrap { gap: 12px; }
       .nav nav { display: none; }
+      .wallet-connect { padding: 8px 12px; }
       .desk-side { grid-template-columns: 1fr; }
       .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
       .steps li { flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 0; }
@@ -1115,7 +1132,10 @@ export function renderJobPage(input: JobPageInput): string {
         <a href="/film">Film</a>
         <a href="/desk">Desk</a>
       </nav>
-      <span class="net" id="net" data-state="idle"><i></i><span>Checking chain…</span></span>
+      <div class="nav-end">
+        <button class="wallet-connect" id="connect" type="button">Connect wallet</button>
+        <span class="net" id="net" data-state="idle"><i></i><span>Checking chain…</span></span>
+      </div>
     </div>
   </header>
 
@@ -1124,7 +1144,7 @@ export function renderJobPage(input: JobPageInput): string {
       <div>
         <p class="eyebrow reveal" style="--d:0">Job pool · World ID · ERC-8183</p>
         <h1 class="reveal" style="--d:1">The pool pays <em>two different</em> humans.</h1>
-        <p class="deck reveal" style="--d:2">One person can run the buyer and the worker and finish the job. The credits stay in escrow, and that sale does not count. A second person proves the buyer, and the same delivery gets paid. Your wallet signs the live version of this on the home page.</p>
+        <p class="deck reveal" style="--d:2">One person can run the buyer and the worker and finish the job. The credits stay in escrow, and that sale does not count. A second person proves the buyer, and the same delivery gets paid. Connect a wallet and this page can fund the same job on World Chain Sepolia.</p>
         <div class="hero-cta reveal" style="--d:3">
           <a class="btn primary lg" href="#desk">${focus ? "Continue the job" : "Post a job"} <span aria-hidden="true">↓</span></a>
           <a class="btn ghost lg" href="/flow">Watch the flow</a>
@@ -1142,6 +1162,8 @@ export function renderJobPage(input: JobPageInput): string {
         </ul>
       </aside>
     </section>
+
+    ${wallet.section}
 
     <section class="desk reveal" style="--d:4" id="desk" aria-label="Job desk">
       <aside class="desk-side">
@@ -1185,7 +1207,7 @@ export function renderJobPage(input: JobPageInput): string {
   <footer>
     <div class="wrap">
       <span>Rebind · ETHGlobal Tokyo 2026</span>
-      <nav aria-label="Earlier cuts"><a href="/">Wallet desk</a><a href="/desk">Revoke a key</a><a href="/film">90-second film</a><a href="/flow">Watch the flow</a></nav>
+      <nav aria-label="Earlier cuts"><a href="/desk">Revoke a key</a><a href="/film">90-second film</a><a href="/flow">Watch the flow</a></nav>
     </div>
   </footer>
 
@@ -1316,11 +1338,11 @@ export function renderJobPage(input: JobPageInput): string {
               schedule(5000);
             } else if (response.ok && body.attached) {
               say("Approved. Updating…", false);
-              location.replace("/credits#desk");
+              location.replace("/#desk");
             } else if (response.status === 403) {
-              location.replace("/credits?flash=not-approved#desk");
+              location.replace("/?flash=not-approved#desk");
             } else {
-              location.replace("/credits?flash=world-error#desk");
+              location.replace("/?flash=world-error#desk");
             }
           } catch (error) {
             say("Connection hiccup. Retrying…", true);
@@ -1482,6 +1504,7 @@ export function renderJobPage(input: JobPageInput): string {
       });
     })();
   </script>
+  ${wallet.tail}
 </body>
 </html>`;
 }
