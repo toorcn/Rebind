@@ -1,6 +1,20 @@
-# C3 Day 0 — revoke theater
+# Rebind — the pool pays two humans
 
-ETHGlobal Tokyo 2026. Locked spine **C3**: AgentBook revoke / rotate as a signing-key lifecycle.
+ETHGlobal Tokyo 2026. A buyer agent escrows a reward. A worker agent delivers the job. The credits leave escrow only when the buyer and the worker have each finished a sandbox World ID check, the server has verified both tokens, and the two subject ids differ.
+
+One person can run both agents and finish the work. The payout stays locked, and it does not count. A second person proves the buyer, and the same delivery is paid. A request body that says `differentHumans: true` does not unlock the pool.
+
+```bash
+npm i
+npm run self-pay
+npm run dev
+```
+
+Open http://127.0.0.1:43210 . `self-pay` prints `SAME_HUMAN`, `CLIENT_CLAIM_IGNORED`, `NOT_A_WORLD_PROOF`, and `PAYOUT_RELEASED`, then `SELF_PAY_PASSED`.
+
+The earlier revoke desk is still at `/desk`. The 90-second cut is at `/film`.
+
+## Revoke desk
 
 Default `npm run dev` is **win** mode: a revoked key is denied on every grant, and a rotated key pays only after the server validates a rebind.
 
@@ -22,6 +36,7 @@ The script prints `REVOKE_INEFFECTIVE` and `ROTATE_NO_REBIND`, then exits 0. Exi
 
 ```bash
 npm i
+npm run self-pay
 npm run win-revoke
 npm run foil-revoke
 ```
@@ -42,7 +57,7 @@ npm run dev
 
 Foil server instead: `FOIL_MODE=1 npm run dev` (or `npm run dev:foil`).
 
-[90-second cut](http://127.0.0.1:43210) plays the film in the browser. [Operator desk](http://127.0.0.1:43210/desk) is the registry table and the hand-driven forms.
+[Job pool](http://127.0.0.1:43210) is the live desk. [90-second cut](http://127.0.0.1:43210/film) plays the revoke film. [Operator desk](http://127.0.0.1:43210/desk) is the key lifecycle.
 
 Drive that server instead of an in-process one:
 

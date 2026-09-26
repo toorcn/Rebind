@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import { jobsFromUnknown, type Job } from "./pool";
 import type { RebindRequest } from "./rebind";
 import type { AgentRecord } from "./registry";
 
@@ -27,6 +28,40 @@ export interface DurableState {
   deviceCodes: Record<string, string>;
   prompts: Record<string, WorldPrompt>;
   grants: DurableGrant[];
+  jobs: Job[];
+  jobDevices: Record<string, string>;
+  jobPrompts: Record<string, WorldPrompt>;
+}
+
+function stringRecord(value: unknown): Record<string, string> {
+  if (typeof value !== "object" || value === null) return {};
+  const out: Record<string, string> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (typeof item === "string") out[key] = item;
+  }
+  return out;
+}
+
+function promptRecord(value: unknown): Record<string, WorldPrompt> {
+  if (typeof value !== "object" || value === null) return {};
+  const out: Record<string, WorldPrompt> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (typeof item !== "object" || item === null) continue;
+    const prompt = item as Partial<WorldPrompt>;
+    if (
+      typeof prompt.userCode !== "string" ||
+      typeof prompt.verificationUri !== "string" ||
+      typeof prompt.verificationUriComplete !== "string"
+    ) {
+      continue;
+    }
+    out[key] = {
+      userCode: prompt.userCode,
+      verificationUri: prompt.verificationUri,
+      verificationUriComplete: prompt.verificationUriComplete,
+    };
+  }
+  return out;
 }
 
 /** Signs the desk state so a browser can carry it without being able to edit it. */
@@ -48,13 +83,22 @@ export function openState(token: string, secret: string): DurableState | null {
     return null;
   }
   try {
-    const parsed = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as DurableState;
+    const parsed = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as Partial<DurableState>;
     if (!Array.isArray(parsed.agents) || !Array.isArray(parsed.rebinds) || !Array.isArray(parsed.grants)) {
       return null;
     }
     if (typeof parsed.deviceCodes !== "object" || parsed.deviceCodes === null) return null;
     if (typeof parsed.prompts !== "object" || parsed.prompts === null) parsed.prompts = {};
-    return parsed;
+    return {
+      agents: parsed.agents,
+      rebinds: parsed.rebinds,
+      deviceCodes: parsed.deviceCodes,
+      prompts: parsed.prompts,
+      grants: parsed.grants,
+      jobs: jobsFromUnknown(parsed.jobs),
+      jobDevices: stringRecord(parsed.jobDevices),
+      jobPrompts: promptRecord(parsed.jobPrompts),
+    };
   } catch {
     return null;
   }

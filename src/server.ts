@@ -30,6 +30,7 @@ if (!process.env.VERCEL) {
   app.listen(port, host, () => {
     console.log(foil ? "C3 foil — revoke theater" : "C3 win — revoke enforced");
     console.log(`http://127.0.0.1:${port}`);
+    console.log("Job pool: payout waits for two different sandbox World IDs.");
     console.log(
       foil
         ? "Grant path ignores revoke. This process is the foil, on purpose."

@@ -3,6 +3,8 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import express, { type Express, type Request, type Response } from "express";
 import { openState, sealState, type DurableState, type WorldPrompt } from "./durable-state";
+import { mountJobDesk } from "./jobs";
+import { JobPool } from "./pool";
 import { RebindDesk, type RebindRequest } from "./rebind";
 import { AgentBookRegistry, type AgentRecord } from "./registry";
 import { signAgentRequest, verifyAgentRequest } from "./sign";
@@ -315,7 +317,7 @@ function renderPage(
         <p class="kicker">Rebind</p>
         <p class="tag">${mode === "foil" ? "This server still takes payment after revoke. That is the bug." : "Revoke a key, and the next payment fails."}</p>
       </div>
-      <a class="ghost" href="/">Watch the 90-second cut</a>
+      <a class="ghost" href="/film">Watch the 90-second cut</a>
     </div>
     <ol class="rail" aria-label="Progress">
       ${steps
@@ -529,6 +531,9 @@ function rememberDesk(
   deviceCodes: Map<string, string>,
   prompts: Map<string, WorldPrompt>,
   grants: GrantLogEntry[],
+  pool: JobPool,
+  jobDevices: Map<string, string>,
+  jobPrompts: Map<string, WorldPrompt>,
   secret: string
 ): void {
   app.use((req, res, next) => {
@@ -539,12 +544,21 @@ function rememberDesk(
     deviceCodes.clear();
     prompts.clear();
     grants.length = 0;
+    pool.replaceAll(state?.jobs ?? []);
+    jobDevices.clear();
+    jobPrompts.clear();
     if (state) {
       for (const [id, code] of Object.entries(state.deviceCodes)) {
         if (typeof code === "string") deviceCodes.set(id, code);
       }
       for (const [id, prompt] of Object.entries(state.prompts)) {
         if (isWorldPrompt(prompt)) prompts.set(id, prompt);
+      }
+      for (const [id, code] of Object.entries(state.jobDevices)) {
+        if (typeof code === "string") jobDevices.set(id, code);
+      }
+      for (const [id, prompt] of Object.entries(state.jobPrompts)) {
+        if (isWorldPrompt(prompt)) jobPrompts.set(id, prompt);
       }
       for (const entry of state.grants.slice(-30)) {
         grants.push(entry);
@@ -562,6 +576,9 @@ function rememberDesk(
           deviceCodes: Object.fromEntries(deviceCodes),
           prompts: Object.fromEntries(prompts),
           grants: grants.slice(-30).map((entry) => ({ ...entry })),
+          jobs: pool.list(),
+          jobDevices: Object.fromEntries(jobDevices),
+          jobPrompts: Object.fromEntries(jobPrompts),
         };
         res.cookie("rebind_state", sealState(nextState, secret), {
           httpOnly: true,
@@ -585,15 +602,18 @@ export function createApp(registry: AgentBookRegistry, options: AppOptions = {})
   const desk = new RebindDesk(options.rebindTtlMs ?? 10 * 60 * 1000);
   const deviceCodes = new Map<string, string>();
   const prompts = new Map<string, WorldPrompt>();
+  const pool = new JobPool();
+  const jobDevices = new Map<string, string>();
+  const jobPrompts = new Map<string, WorldPrompt>();
   const stateSecret = process.env.WORLD_CLIENT_SECRET ?? "";
 
   app.use(express.json());
   if (stateSecret) {
-    rememberDesk(app, registry, desk, deviceCodes, prompts, grants, stateSecret);
+    rememberDesk(app, registry, desk, deviceCodes, prompts, grants, pool, jobDevices, jobPrompts, stateSecret);
   }
   app.use(express.urlencoded({ extended: false }));
 
-  app.get("/", (_req: Request, res: Response) => {
+  app.get("/film", (_req: Request, res: Response) => {
     res.type("html").send(readFilmPage());
   });
 
@@ -900,6 +920,8 @@ export function createApp(registry: AgentBookRegistry, options: AppOptions = {})
   app.post(PAID_RESOURCE, (req: Request, res: Response) => {
     grantPaidResource(req, res, registry, sessions, grants, mode);
   });
+
+  mountJobDesk(app, { pool, jobDevices, jobPrompts });
 
   return app;
 }
