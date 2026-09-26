@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Rebind — the pool pays two humans</title>
+  <style>
+    @page { size: 13.333in 7.5in; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #0e100c; }
+    body { font-family: "Iowan Old Style", Palatino, Georgia, serif; color: #f4f1e8; }
+    .slide {
+      width: 13.333in; height: 7.5in; page-break-after: always; break-after: page;
+      position: relative; overflow: hidden; padding: 0.38in 0.52in 0.46in; background: #12140f;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .slide:last-child { page-break-after: auto; }
+    .kicker {
+      font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; letter-spacing: 0.14em;
+      text-transform: uppercase; color: #b7b2a6; margin: 0 0 8px;
+    }
+    h1 { font-weight: 500; font-size: 42px; line-height: 1.02; letter-spacing: -0.03em; margin: 0; max-width: 12.2in; }
+    h2 { font-weight: 500; font-size: 30px; line-height: 1.06; letter-spacing: -0.025em; margin: 0 0 10px; max-width: 12.2in; }
+    p, li, td, th { font-family: ui-sans-serif, system-ui, sans-serif; }
+    .lead { margin: 12px 0 0; font-size: 18px; line-height: 1.35; color: #d9d3c5; max-width: 8.2in; }
+    .split { display: flex; gap: 16px; margin-top: 12px; align-items: stretch; }
+    .col { flex: 1; min-width: 0; }
+    .shot {
+      width: 6.35in; height: 4.55in; object-fit: cover; object-position: top center;
+      border: 1px solid #3a4034; border-radius: 10px; background: #181b15;
+    }
+    .shot.wide {
+      width: 12.2in; height: 5.15in; margin-top: 8px; object-fit: cover; object-position: top center;
+    }
+    .grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+    .box { width: calc(50% - 5px); background: #181b15; border: 1px solid #2c3128; padding: 10px 12px 8px; }
+    .box.third { width: calc(33.33% - 7px); }
+    .box h3 {
+      font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #e3b341; margin: 0 0 5px;
+    }
+    .box p, .note { margin: 0; font-size: 14px; line-height: 1.32; color: #f4f1e8; }
+    .cite { margin: 5px 0 0; font-size: 11px; line-height: 1.3; color: #8d887c; word-break: break-all; }
+    ul { margin: 6px 0 0; padding-left: 16px; }
+    li { font-size: 15px; line-height: 1.32; margin: 0 0 6px; }
+    pre {
+      margin: 8px 0 0; padding: 10px 12px; background: #181b15; border: 1px solid #2c3128;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; line-height: 1.38;
+      color: #f4f1e8; white-space: pre-wrap;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td {
+      text-align: left; font-size: 13.5px; line-height: 1.3; padding: 6px 8px;
+      border-top: 1px solid #2c3128; vertical-align: top;
+    }
+    th { color: #b7b2a6; font-weight: 600; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .ok { color: #8fdf7a; }
+    .bad { color: #ff8d8d; }
+    .wait { color: #e3b341; }
+    .steps { display: flex; gap: 8px; margin-top: 10px; }
+    .step {
+      flex: 1; background: #181b15; border: 1px solid #2c3128; border-radius: 10px; padding: 8px 10px;
+    }
+    .step b {
+      display: block; font-family: ui-sans-serif, system-ui, sans-serif; color: #e3b341;
+      font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px;
+    }
+    .step span { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; line-height: 1.3; }
+    .foot {
+      position: absolute; left: 0.52in; right: 0.52in; bottom: 0.18in;
+      display: flex; justify-content: space-between;
+      font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; color: #8d887c;
+    }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+  </style>
+</head>
+<body>
+
+  <section class="slide">
+    <p class="kicker">Rebind · job pool · ETHGlobal Tokyo 2026</p>
+    <h1>The pool pays two different humans.</h1>
+    <div class="split">
+      <div class="col">
+        <p class="lead">One person can run the buyer agent and the worker agent and finish the job. The credits stay in escrow, and that sale does not count. A second person proves the buyer. The same delivery is paid.</p>
+        <ul>
+          <li>Live desk: <code>https://rebind-psi.vercel.app</code></li>
+          <li>World ID enters as a pairwise subject on a token this server has checked. It is the settlement condition.</li>
+          <li>A request body that says <code>differentHumans: true</code> does not move Paid out.</li>
+        </ul>
+        <p class="cite">Track aim: World ID for Agents, sandbox issuer <code>https://sandbox.auth.world.org</code>. Tokyo’s public World pool is $15,000. The track write-up on the prize page still says “details coming soon.” ethglobal.com/events/tokyo2026/prizes</p>
+      </div>
+      <img class="shot" src="img/01-empty.png" alt="Empty job pool: escrow, paid, and refused all at zero, with the escrow form." />
+    </div>
+    <div class="foot"><span>Pitch for judges · 26 Sep 2026</span><span>1 / 12</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">The scene the demo has to produce</p>
+    <h2>The job is delivered. The client says the humans differ. Paid out stays 0.</h2>
+    <img class="shot wide" src="img/04-claim.png" alt="Delivered job with a claim-ignored receipt and the ledger still at 40 escrow, 0 paid." />
+    <p class="note" style="margin-top:8px;">Production check, same day: post a job with a forged buyer subject, deliver it, then POST <code>differentHumans: true</code> plus two subject ids. Response: both proofs null, ignored fields listed, escrow 40, paid 0, counted 0.</p>
+    <div class="foot"><span>The number to watch is Paid out</span><span>2 / 12</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Why the payout is the bug · sources</p>
+    <h2>Agent markets already count a sale the seller made to himself.</h2>
+    <div class="grid">
+      <div class="box">
+        <h3>Virtuals aGDP, audited by Sieve</h3>
+        <p>Sieve’s write-up of the Agent Commerce Protocol leaderboard: the epoch distributes $81,515. Four agents it marks BLOCK share about 201 buyers, funded through one Disperse contract, on mechanical 15-second jobs. The score is computed after the jobs exist. “Human attestation” is listed as a future signal, weighted 10%.</p>
+        <p class="cite">github.com/saurrx/sieve · synthesis.mandate.md/projects/sieve-2130</p>
+      </div>
+      <div class="box">
+        <h3>ERC-8004 reputation, measured</h3>
+        <p>Zhao et al., “Can Trustless Agents Be Trusted?” Reviewers flagged for coordinated Sybil behavior: 73.5% on Ethereum, 59.2% on BSC, 90.6% on Base. The paper’s point: a public feedback registry is not a trust signal when the reviewer set can be manufactured.</p>
+        <p class="cite">arxiv.org/html/2606.26028v2</p>
+      </div>
+      <div class="box">
+        <h3>The spec already warns</h3>
+        <p>ERC-8004 <code>getSummary</code>: client addresses must be provided. Results without that filter are subject to Sybil and spam. Aggregation of reviewer reputation is left off-chain. The standard publishes the signal. It does not refuse a payment.</p>
+        <p class="cite">eips.ethereum.org/EIPS/eip-8004</p>
+      </div>
+      <div class="box">
+        <h3>RNWY shows the wallets</h3>
+        <p>RNWY’s own guide: when 91% of reviews on an agent come from wallets created within 24 hours of the review, the explorer shows the timestamps. That sentence is an example of visibility. The product under it is a score you can read. Settlement still happens.</p>
+        <p class="cite">rnwy.com/learn/verify-ai-agents</p>
+      </div>
+    </div>
+    <div class="foot"><span>Detection is published. Refusal at payout is the open piece.</span><span>3 / 12</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">What a World track has already rewarded, and excluded</p>
+    <h2>The human id has to change the settlement, or it is a badge.</h2>
+    <div class="grid">
+      <div class="box third">
+        <h3>Lisbon’s published exclusions</h3>
+        <p>World’s Lisbon 2026 prize page says these patterns will not qualify: agent reputation, human-backed content generation, and human-backed benefits for agents such as API calls and discounts.</p>
+        <p class="cite">ethglobal.com/events/lisbon2026/prizes</p>
+      </div>
+      <div class="box third">
+        <h3>The winner put the id in the fee</h3>
+        <p>Turing Swap won Lisbon’s World AgentKit prize by reading <code>AgentBook.lookupHuman</code> inside a 1inch SwapVM opcode and changing the fee. The human id changed the price. A discount lane is the pattern the brief above names.</p>
+        <p class="cite">ethglobal.com/showcase/turing-swap-ck2y6</p>
+      </div>
+      <div class="box third">
+        <h3>This pool withholds the credit</h3>
+        <p>Buyer subject and worker subject are stored only after a server-checked World ID token. If they match, escrow stays put and the job is refused. Counted revenue is the paid figure alone.</p>
+        <p class="cite">src/pool.ts · decidePayout</p>
+      </div>
+    </div>
+    <p class="lead" style="max-width:12in;font-size:16px;">Sieve can tell you the farm happened. A reputation feed can rank it. A free-trial counter, the shape in AgentKit’s own docs, meters one human’s quota across agents. None of those is this pitch. The pitch is a finished task whose reward does not become revenue.</p>
+    <div class="foot"><span>Tokyo track text is not published yet. Lisbon is the last public sponsor bar.</span><span>4 / 12</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">The rule · one function, no client argument</p>
+    <h2>decidePayout reads delivery, two proofs, and nothing the browser asserts.</h2>
+    <div class="split">
+      <div class="col">
+        <pre>if not delivered            → hold
+if either proof is missing  → hold
+if issuer ≠ sandbox World   → hold     (not-world)
+if subject A = subject B    → hold     (same-human, refused)
+else                        → release  (counted = reward)</pre>
+        <p class="note" style="margin-top:8px;">Issuer that counts: <code>https://sandbox.auth.world.org</code>. A local issuer named <code>local-sandbox</code> stays unpaid even when the two subject strings differ. Replacing the buyer subject with a second World subject releases the same job and clears the refused total.</p>
+      </div>
+      <div class="col">
+        <table>
+          <thead><tr><th>Stamp from npm run self-pay</th><th>Escrow</th><th>Paid</th><th>Refused</th></tr></thead>
+          <tbody>
+            <tr><td>DELIVERED</td><td>40</td><td>0</td><td>0</td></tr>
+            <tr><td>CLIENT_CLAIM_IGNORED</td><td>40</td><td>0</td><td>0</td></tr>
+            <tr><td class="bad">SAME_HUMAN</td><td>40</td><td>0</td><td>40</td></tr>
+            <tr><td class="bad">NOT_A_WORLD_PROOF</td><td>40</td><td>0</td><td>0</td></tr>
+            <tr><td class="ok">PAYOUT_RELEASED</td><td>0</td><td>40</td><td>0</td></tr>
+          </tbody>
+        </table>
+        <p class="cite">Run on this repo, 26 Sep 2026. Exit 0 prints SELF_PAY_PASSED. The HTTP half posts a forged subject and a differentHumans body against the live routes. Both proofs stay null.</p>
+      </div>
+    </div>
+    <div class="foot"><span>Counted revenue is the paid column</span><span>5 / 12</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Where the World ID token enters</p>
+    <h2>The subject is taken from an ID token. The device code never reaches the page.</h2>
+    <div class="steps">
+      <div class="step"><b>1 · Code</b><span>Server POSTs the device-authorization endpoint with HTTP Basic. A secret in the form body is rejected by the issuer. The page receives only the user code.</span></div>
+      <div class="step"><b>2 · Person</b><span>That person approves the code in the sandbox World App. Pending and denied pulls attach nothing.</span></div>
+      <div class="step"><b>3 · Check</b><span>One token pull. RS256 against the JWKS. Issuer, audience, and expiry have to match. Then we store subject and issuer.</span></div>
+      <div class="step"><b>4 · Settle</b><span>Both seats must carry that issuer. The subjects must differ. The decision is recomputed from the stored proofs.</span></div>
+    </div>
+    <div class="grid">
+      <div class="box">
+        <h3>Discovery, fetched 26 Sep 2026</h3>
+        <p>Issuer <code>https://sandbox.auth.world.org</code>. Device endpoint <code>/api/v1/device_authorization</code>. Token endpoint <code>/api/v1/token</code>. JWKS on the well-known document. Signing alg RS256. Subject type pairwise. Grants include <code>urn:ietf:params:oauth:grant-type:device_code</code>. Scope <code>openid</code>.</p>
+        <p class="cite">sandbox.auth.world.org/.well-known/openid-configuration</p>
+      </div>
+      <div class="box">
+        <h3>What the browser cannot supply</h3>
+        <p>Post, deliver, and claim accept a subject, an issuer, <code>released</code>, and <code>differentHumans</code>. Those fields are not copied onto the job. There is no <code>/proof</code> route. Pull without a server-held device code returns an error and stores nothing. On Vercel the job, the device code, and the user code ride in an HMAC-signed httpOnly cookie so the escrow survives the next request.</p>
+        <p class="cite">src/jobs.ts · src/world-oidc.ts · src/durable-state.ts</p>
+      </div>
+    </div>
+    <div class="foot"><span>Protected action: release of escrow. Login is a different product.</span><span>6 / 12</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Screen · step 1</p>
+    <h2>Escrow is not revenue. The reward sits in the pool at 40, paid 0.</h2>
+    <img class="shot wide" src="img/02-escrow.png" alt="Job posted. Ledger shows 40 in escrow, 0 paid, 0 refused. Next action is to mark the work delivered." />
+    <p class="note" style="margin-top:8px;">The form is prefilled so the booth is one button: “Summarize the Tokyo briefing,” 40 credits, buyer agent, worker agent. Posting writes a job id the client does not choose. Proofs start null.</p>
+    <div class="foot"><span>rebind-psi.vercel.app</span><span>7 / 12</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Screen · step 2</p>
+    <h2>Delivered, still unpaid. The next action is a World code, not a checkbox.</h2>
+    <img class="shot wide" src="img/03-delivered.png" alt="Delivered job waiting on two World App approvals, with a button that claims the humans are different." />
+    <p class="note" style="margin-top:8px;">Buyer and worker are still “Waiting for World App.” The ghost button sends <code>differentHumans=true</code> and two fake subject ids. The following screen is the claim receipt on page 2: the pool did not read those fields. Get-code on a server without credentials returns “World App is off,” and the ledger does not move. Production has the sandbox client, so that button issues a real user code.</p>
+    <div class="foot"><span>Same 40 credits. New status. No payout.</span><span>8 / 12</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Screen · the recorded take</p>
+    <h2>Same function, fixture subjects. The live ledger above this panel does not move.</h2>
+    <img class="shot wide" src="img/05-take.png" alt="Recorded take: claim ignored, same human refused at 40, local issuer unpaid, second subject releases 40." />
+    <p class="note" style="margin-top:8px;">SAME_HUMAN stores one pairwise-shaped subject on both seats and refuses 40. NOT_A_WORLD_PROOF uses issuer <code>local-sandbox</code> with two different strings and pays 0. PAYOUT_RELEASED swaps the buyer to a second subject at the sandbox issuer: escrow 0, paid 40, refused 0. These subjects are attached by the server inside <code>runSelfPay()</code>. They are not a World App approval. The panel says so.</p>
+    <div class="foot"><span>POST /demo/self-pay · passed: true on production</span><span>9 / 12</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Booth script · about 90 seconds</p>
+    <h2>Narrate the Paid out column. The job status will lie to you.</h2>
+    <table>
+      <thead><tr><th>When</th><th>Do this</th><th>Paid out</th><th>Say this</th></tr></thead>
+      <tbody>
+        <tr><td>0:00</td><td>Open the pool.</td><td>0</td><td>Two agents, one reward, nothing earned.</td></tr>
+        <tr><td>0:12</td><td>Escrow the prefilled job.</td><td>0</td><td>40 is locked. It is not revenue.</td></tr>
+        <tr><td>0:24</td><td>Mark the work delivered.</td><td>0</td><td>The task is done. The pool has not paid.</td></tr>
+        <tr><td>0:36</td><td>Say the humans are different.</td><td>0</td><td>The client filed the claim. The server dropped it.</td></tr>
+        <tr><td>0:50</td><td>One phone approves buyer and worker.</td><td>0</td><td>Same subject. Refused. Still in escrow.</td></tr>
+        <tr><td>1:10</td><td>A second phone approves a new buyer code.</td><td>40</td><td>Subjects differ. The same delivery counts.</td></tr>
+      </tbody>
+    </table>
+    <p class="lead" style="font-size:16px;max-width:12in;">If the second phone is not in the room, play the recorded take at 0:50 and point at SAME_HUMAN, then PAYOUT_RELEASED. Say that those subjects are fixtures. The live path is the two World App approvals. Both paths call the same payout rule.</p>
+    <div class="foot"><span>Fail path is the product. The release is the control.</span><span>10 / 12</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">What is running, and what still needs a person</p>
+    <h2>The refusal is deployed. The second live subject is a World App approval.</h2>
+    <div class="grid">
+      <div class="box">
+        <h3 class="ok">True on 26 Sep 2026</h3>
+        <p><code>npm run self-pay</code> exits 0, including the HTTP forged-subject check. <code>npm run win-revoke</code> and <code>npm run foil-revoke</code> still exit 0. Production serves the desk, the film at <code>/film</code>, and the older key desk at <code>/desk</code>. A cookie-jar against production kept the job across requests, ignored the forged proof, and returned <code>passed: true</code> for the take. The sandbox discovery document matches the endpoints in <code>src/world-oidc.ts</code>.</p>
+      </div>
+      <div class="box">
+        <h3 class="wait">Still a human in the sandbox app</h3>
+        <p>Production can start a device grant and return a user code. Until someone approves it, pull stays pending and no subject is stored. Two different sandbox World App accounts are what move the live Paid out number. One account on both seats is what fills Refused. The film’s older rebind path is a separate desk. This pitch does not depend on it.</p>
+      </div>
+      <div class="box">
+        <h3>Out of scope, on purpose</h3>
+        <p>No AgentBook opcode. No World login. No reputation score. No free-trial meter. No claim that a fixture subject was issued by World App. Credits are an in-app unit, not USDC.</p>
+      </div>
+      <div class="box">
+        <h3>How a judge re-runs it</h3>
+        <p><code>npm i</code> · <code>npm run self-pay</code> · <code>npm run dev</code> · open port 43210. Production: the URL on page 1. World credentials stay on the server. They are not in the repo.</p>
+      </div>
+    </div>
+    <div class="foot"><span>Honest limit: the live happy path needs a second person</span><span>11 / 12</span></div>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">The line, then the sources</p>
+    <h1>Manufactured revenue the pool refuses to pay.</h1>
+    <p class="lead">Two agents, one phone, a finished task, a balance that stays in escrow. A second human, and the same task counts.</p>
+    <div class="grid">
+      <div class="box">
+        <h3>Primary sources</h3>
+        <p>Sieve audit — github.com/saurrx/sieve</p>
+        <p>ERC-8004 measurement — arxiv.org/html/2606.26028v2</p>
+        <p>ERC-8004 — eips.ethereum.org/EIPS/eip-8004</p>
+        <p>RNWY reviewer ages — rnwy.com/learn/verify-ai-agents</p>
+        <p class="cite">Fetched and checked 26 Sep 2026. The 91% line is RNWY’s example of a visible pattern, not a network-wide rate.</p>
+      </div>
+      <div class="box">
+        <h3>Sponsor and issuer</h3>
+        <p>Lisbon exclusions — ethglobal.com/events/lisbon2026/prizes</p>
+        <p>Turing Swap — ethglobal.com/showcase/turing-swap-ck2y6</p>
+        <p>Tokyo World pool — ethglobal.com/events/tokyo2026/prizes</p>
+        <p>Sandbox OIDC — sandbox.auth.world.org/.well-known/openid-configuration</p>
+        <p class="cite">Screenshots: local win-mode server, 26 Sep 2026, after escrow, delivery, the ignored claim, and the recorded take.</p>
+      </div>
+    </div>
+    <div class="foot"><span>Rebind · the job pool</span><span>12 / 12</span></div>
+  </section>
+
+</body>
+</html>
