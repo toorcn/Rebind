@@ -90,20 +90,36 @@ function deviceKey(jobId: string, seat: Seat): string {
   return `${jobId}:${seat}`;
 }
 
+const ICON_WAIT = `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4.25l2.75 1.75" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+const ICON_BAD = `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v5M10 13.6v.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
+const ICON_CHECK = `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10.5l3.2 3.2L15 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+function notice(tone: "wait" | "bad", title: string, body: string): string {
+  return `<div class="notice ${tone}" role="status">
+      <span class="notice-icon">${tone === "wait" ? ICON_WAIT : ICON_BAD}</span>
+      <div><p class="notice-title">${title}</p><p>${body}</p></div>
+      <button class="notice-close" type="button" aria-label="Dismiss" data-dismiss>×</button>
+    </div>`;
+}
+
 function flashHtml(flash: string): string {
   switch (flash) {
     case "waiting":
-      return `<div class="receipt wait"><p class="stamp">Still waiting</p><p>World App has not approved this code yet. Approve it there, then check again.</p></div>`;
+      return notice("wait", "Still waiting", "World App has not approved this code yet. Approve it there, then check again.");
     case "not-approved":
-      return `<div class="receipt bad"><p class="stamp">Not approved</p><p>World App refused that code. Start a new one.</p></div>`;
+      return notice("bad", "Not approved", "World App refused that code. Start a new one.");
     case "world-down":
-      return `<div class="receipt wait"><p class="stamp">World App is off on this server</p><p>Sandbox credentials are not set here. The recorded take further down still runs the same payout rule.</p></div>`;
+      return notice(
+        "wait",
+        "World App is off on this server",
+        "Sandbox credentials are not set here. The recorded take further down still runs the same payout rule."
+      );
     case "world-error":
-      return `<div class="receipt bad"><p class="stamp">World App did not start</p><p>The code request failed. Try again in a moment.</p></div>`;
+      return notice("bad", "World App did not start", "The code request failed. Try again in a moment.");
     case "bad":
-      return `<div class="receipt bad"><p class="stamp">Check the job</p><p>It needs a title, a short brief, a reward from 1 to 500, and a name for each agent.</p></div>`;
+      return notice("bad", "Check the job", "It needs a title, a short brief, a reward from 1 to 500, and a name for each agent.");
     case "missing":
-      return `<div class="receipt bad"><p class="stamp">That job is gone</p><p>Post it again. The pool only keeps the latest dozen.</p></div>`;
+      return notice("bad", "That job is gone", "Post it again. The pool only keeps the latest dozen.");
     default:
       return "";
   }
@@ -111,56 +127,124 @@ function flashHtml(flash: string): string {
 
 function claimReceipt(job: Job): string {
   if (!job.claimIgnored || job.decision.released) return "";
-  return `<div class="receipt bad"><p class="stamp">Claim ignored</p><p>The request said the humans were different and sent two subject ids. The pool did not read those fields.</p></div>`;
+  return notice(
+    "bad",
+    "Claim ignored",
+    "The request said the humans were different and sent two subject ids. The pool did not read those fields."
+  );
 }
 
-function proofLine(job: Job, seat: Seat): string {
+function seatCard(job: Job, seat: Seat, active: boolean): string {
   const proof = seat === "buyer" ? job.buyer : job.worker;
   const name = seat === "buyer" ? job.buyerName : job.workerName;
-  if (!proof) return `<li><span>${escapeHtml(name)}</span><em>Waiting for World App</em></li>`;
-  return `<li><span>${escapeHtml(name)}</span><code>${escapeHtml(shortSubject(proof.subject))}</code></li>`;
+  const status = proof
+    ? `<p class="seat-status ok">${ICON_CHECK}<span>World ID verified</span></p><code class="seat-sub" title="${escapeHtml(proof.subject)}">${escapeHtml(shortSubject(proof.subject))}</code>`
+    : `<p class="seat-status">${active ? '<i class="pulse"></i>' : '<i class="dot"></i>'}<span>Waiting for World App</span></p><code class="seat-sub empty">sub · — — —</code>`;
+  return `<article class="seat${proof ? " verified" : ""}${active ? " active" : ""}">
+      <p class="seat-role">${seatLabel(seat)}</p>
+      <h3>${escapeHtml(name)}</h3>
+      ${status}
+    </article>`;
+}
+
+function seatsHtml(job: Job, activeSeat: Seat | null): string {
+  const both = job.buyer && job.worker;
+  const match = !both ? "pending" : job.buyer!.subject === job.worker!.subject ? "same" : "differ";
+  const glyph = match === "same" ? "=" : match === "differ" ? "≠" : "?";
+  const caption = match === "same" ? "Same human" : match === "differ" ? "Distinct" : "Pending";
+  return `<div class="seats" data-match="${match}">
+      ${seatCard(job, "buyer", activeSeat === "buyer")}
+      <div class="versus" aria-label="${caption}"><span>${glyph}</span><small>${caption}</small></div>
+      ${seatCard(job, "worker", activeSeat === "worker")}
+    </div>`;
+}
+
+function codeCells(code: string): string {
+  return Array.from(code)
+    .map((char) =>
+      /[A-Za-z0-9]/.test(char) ? `<span>${escapeHtml(char)}</span>` : `<span class="sep">${escapeHtml(char)}</span>`
+    )
+    .join("");
 }
 
 function worldPanel(job: Job, seat: Seat, prompts: Map<string, WorldPrompt>): string {
   const prompt = prompts.get(deviceKey(job.id, seat));
   const who = seatLabel(seat);
   if (!prompt) {
-    return `<form method="post" action="/jobs/${escapeHtml(job.id)}/world/start">
+    return `<form class="world-start" method="post" action="/jobs/${escapeHtml(job.id)}/world/start">
       <input type="hidden" name="role" value="${who}" />
-      <button class="primary" type="submit">Get the ${who}'s World code</button>
+      <button class="btn primary lg" type="submit">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="10" r="2.6" fill="currentColor"/></svg>
+        Get the ${who}'s World code
+      </button>
+      <p class="hint">A one-time code is issued by sandbox.auth.world.org for the ${who} seat.</p>
     </form>`;
   }
   const open = prompt.verificationUriComplete || prompt.verificationUri;
-  return `<p class="code">${escapeHtml(prompt.userCode)}</p>
-    <p class="hint">Approve this code in the sandbox World App as the ${who}.</p>
-    <div class="actions">
-      <a class="primary" href="${escapeHtml(open)}">Open World App</a>
-      <form method="post" action="/jobs/${escapeHtml(job.id)}/world/pull">
-        <input type="hidden" name="role" value="${who}" />
-        <button type="submit">I approved it. Check now.</button>
-      </form>
+  return `<div class="code-block">
+      <div class="code-head">
+        <p class="label">${who} code</p>
+        <button class="copy" type="button" data-copy="${escapeHtml(prompt.userCode)}">Copy</button>
+      </div>
+      <p class="code" aria-label="${escapeHtml(prompt.userCode)}">${codeCells(prompt.userCode)}</p>
+      <p class="hint">Approve this code in the sandbox World App as the ${who}.</p>
+      <div class="actions">
+        <a class="btn primary" href="${escapeHtml(open)}" target="_blank" rel="noopener">Open World App <span aria-hidden="true">↗</span></a>
+        <form method="post" action="/jobs/${escapeHtml(job.id)}/world/pull">
+          <input type="hidden" name="role" value="${who}" />
+          <button class="btn ghost" type="submit">I approved it. Check now.</button>
+        </form>
+      </div>
+      <p class="poll" data-poll data-job="${escapeHtml(job.id)}" data-role="${who}" aria-live="polite"></p>
     </div>`;
 }
 
 function claimForm(job: Job): string {
-  return `<form method="post" action="/jobs/${escapeHtml(job.id)}/claim">
-    <input type="hidden" name="differentHumans" value="true" />
-    <input type="hidden" name="buyerSubject" value="client-buyer" />
-    <input type="hidden" name="workerSubject" value="client-worker" />
-    <button class="ghost" type="submit">Say the humans are different</button>
-  </form>`;
+  return `<div class="tamper">
+      <div>
+        <p class="label">Stress test</p>
+        <p>Send a client claim that says the humans are different, with two made-up subject ids.</p>
+      </div>
+      <form method="post" action="/jobs/${escapeHtml(job.id)}/claim">
+        <input type="hidden" name="differentHumans" value="true" />
+        <input type="hidden" name="buyerSubject" value="client-buyer" />
+        <input type="hidden" name="workerSubject" value="client-worker" />
+        <button class="btn ghost sm" type="submit">Say the humans are different</button>
+      </form>
+    </div>`;
 }
 
 function postForm(): string {
-  return `<form method="post" action="/jobs">
-    <label>Job <input name="title" required maxlength="80" value="Summarize the Tokyo briefing" /></label>
-    <label>What done looks like <input name="brief" required maxlength="280" value="Five bullets a judge can read in ten seconds." /></label>
-    <label>Reward, in credits <input name="reward" required inputmode="numeric" value="40" /></label>
-    <div class="pair">
-      <label>Buyer agent <input name="buyerName" required maxlength="40" value="Buyer agent" /></label>
-      <label>Worker agent <input name="workerName" required maxlength="40" value="Worker agent" /></label>
+  return `<form class="post" method="post" action="/jobs">
+    <label class="field">
+      <span>Job</span>
+      <input name="title" required maxlength="80" value="Summarize the Tokyo briefing" autocomplete="off" />
+    </label>
+    <label class="field">
+      <span>What done looks like</span>
+      <input name="brief" required maxlength="280" value="Five bullets a judge can read in ten seconds." autocomplete="off" />
+    </label>
+    <div class="field">
+      <label for="reward">Reward</label>
+      <div class="reward">
+        <input id="reward" name="reward" required type="number" min="1" max="500" step="1" inputmode="numeric" value="40" />
+        <span class="suffix">credits</span>
+      </div>
+      <div class="chips" role="group" aria-label="Reward presets">
+        <button type="button" class="chip" data-reward="10">10</button>
+        <button type="button" class="chip" data-reward="40">40</button>
+        <button type="button" class="chip" data-reward="120">120</button>
+        <button type="button" class="chip" data-reward="500">500</button>
+      </div>
     </div>
-    <button class="primary" type="submit">Escrow the reward</button>
+    <div class="pair">
+      <label class="field"><span>Buyer agent</span><input name="buyerName" required maxlength="40" value="Buyer agent" autocomplete="off" /></label>
+      <label class="field"><span>Worker agent</span><input name="workerName" required maxlength="40" value="Worker agent" autocomplete="off" /></label>
+    </div>
+    <div class="submit-row">
+      <button class="btn primary lg" type="submit">Escrow the reward <span aria-hidden="true">→</span></button>
+      <p class="hint">Credits move into the pool. They are not revenue yet.</p>
+    </div>
   </form>`;
 }
 
@@ -171,9 +255,11 @@ function panel(moment: Moment, prompts: Map<string, WorldPrompt>): string {
         ${postForm()}`;
     case "deliver":
       return `${head("Step 2 of 4", "The worker finishes", `${moment.job.reward} credits are locked for “${moment.job.title}”. Finish the work. The pool still has not paid.`)}
-        <form method="post" action="/jobs/${escapeHtml(moment.job.id)}/deliver">
-          <label>Delivery <input name="note" required maxlength="280" value="Five bullets, ready for the judge." /></label>
-          <button class="primary" type="submit">Mark the work delivered</button>
+        <form class="post" method="post" action="/jobs/${escapeHtml(moment.job.id)}/deliver">
+          <label class="field"><span>Delivery</span><input name="note" required maxlength="280" value="Five bullets, ready for the judge." autocomplete="off" /></label>
+          <div class="submit-row">
+            <button class="btn primary lg" type="submit">Mark the work delivered <span aria-hidden="true">→</span></button>
+          </div>
         </form>`;
     case "humans":
       return `${head(
@@ -181,35 +267,42 @@ function panel(moment: Moment, prompts: Map<string, WorldPrompt>): string {
         "Two different humans",
         `“${moment.job.title}” is delivered. ${moment.job.reward} credits are still in escrow. Each side approves in World App. This server keeps the subject ids.`
       )}
-        <ul class="proofs">${proofLine(moment.job, "buyer")}${proofLine(moment.job, "worker")}</ul>
+        ${seatsHtml(moment.job, moment.seat)}
         ${worldPanel(moment.job, moment.seat, prompts)}
         ${claimForm(moment.job)}`;
     case "refused":
       return `${head(
         "Step 4 of 4",
         "Same human. The sale does not count.",
-        `Both agents finished “${moment.job.title}”. The subject ids match, so ${moment.job.reward} credits stay in escrow.`
+        `Both agents finished “${moment.job.title}”. The subject ids match, so ${moment.job.reward} credits stay in escrow.`,
+        "bad"
       )}
-        <ul class="proofs">${proofLine(moment.job, "buyer")}${proofLine(moment.job, "worker")}</ul>
+        <p class="verdict bad" aria-hidden="true">Refused</p>
+        ${seatsHtml(moment.job, "buyer")}
         <p class="hint">A second person approves a new code as the buyer. The same delivery can then be paid.</p>
         ${worldPanel(moment.job, "buyer", prompts)}`;
     case "not-world":
       return `${head(
         "Step 3 of 4",
         "Those ids were not issued by World App",
-        "The pool only releases a reward after both tokens check out at sandbox.auth.world.org."
+        "The pool only releases a reward after both tokens check out at sandbox.auth.world.org.",
+        "bad"
       )}
-        <ul class="proofs">${proofLine(moment.job, "buyer")}${proofLine(moment.job, "worker")}</ul>
+        ${seatsHtml(moment.job, "buyer")}
         ${worldPanel(moment.job, "buyer", prompts)}`;
     case "paid":
       return `${head(
         "Paid",
         `${moment.job.reward} credits left escrow`,
-        `The buyer and the worker have different World IDs. “${moment.job.title}” counts as revenue.`
+        `The buyer and the worker have different World IDs. “${moment.job.title}” counts as revenue.`,
+        "ok"
       )}
-        <ul class="proofs">${proofLine(moment.job, "buyer")}${proofLine(moment.job, "worker")}</ul>
-        <p class="hint">Post another job when you want a new escrow.</p>
-        ${postForm()}`;
+        <p class="verdict ok" aria-hidden="true">Released</p>
+        ${seatsHtml(moment.job, null)}
+        <div class="again">
+          <p class="label">Post another job when you want a new escrow.</p>
+          ${postForm()}
+        </div>`;
     default: {
       const leftover: never = moment;
       return leftover;
@@ -217,21 +310,52 @@ function panel(moment: Moment, prompts: Map<string, WorldPrompt>): string {
   }
 }
 
-function head(step: string, title: string, lead: string): string {
-  return `<p class="step">${escapeHtml(step)}</p><h2>${escapeHtml(title)}</h2><p class="lead">${escapeHtml(lead)}</p>`;
+function head(step: string, title: string, lead: string, tone: "" | "ok" | "bad" = ""): string {
+  return `<p class="step${tone ? ` ${tone}` : ""}">${escapeHtml(step)}</p><h2>${escapeHtml(title)}</h2><p class="lead">${escapeHtml(lead)}</p>`;
 }
 
-function history(jobs: Job[]): string {
+function reasonTone(reason: SettleReason): "ok" | "bad" | "wait" | "idle" {
+  switch (reason) {
+    case "released":
+      return "ok";
+    case "same-human":
+    case "not-world":
+      return "bad";
+    case "awaiting-both":
+    case "awaiting-buyer":
+    case "awaiting-worker":
+      return "wait";
+    case "not-delivered":
+      return "idle";
+    default: {
+      const leftover: never = reason;
+      return leftover;
+    }
+  }
+}
+
+function history(jobs: Job[], focusId: string | null): string {
   if (jobs.length === 0) return "";
   const rows = jobs
     .slice()
     .reverse()
     .map((job) => {
       const label = reasonWord(job.decision.reason);
-      return `<li><span>${escapeHtml(job.title)}</span><em>${job.reward} · ${label}</em></li>`;
+      const tone = reasonTone(job.decision.reason);
+      return `<li${job.id === focusId ? ' class="current"' : ""}>
+        <div class="h-title"><span>${escapeHtml(job.title)}</span><code>${escapeHtml(job.id)}</code></div>
+        <span class="chip-status ${tone}"><i></i>${label}</span>
+        <span class="h-reward">${job.reward}<small>cr</small></span>
+      </li>`;
     })
     .join("");
-  return `<h3>Jobs</h3><ul class="history">${rows}</ul>`;
+  return `<section class="section reveal" style="--d:5" aria-labelledby="jobs-h">
+      <div class="section-head">
+        <h2 id="jobs-h">Jobs</h2>
+        <p>${jobs.length} of 12 kept · newest first</p>
+      </div>
+      <ul class="history">${rows}</ul>
+    </section>`;
 }
 
 function reasonWord(reason: SettleReason): string {
@@ -255,17 +379,51 @@ function reasonWord(reason: SettleReason): string {
   }
 }
 
+function focusCard(job: Job | null): string {
+  if (!job) {
+    return `<div class="focus empty"><p class="label">Current job</p><p>No job in the pool yet. Post one to lock a reward in escrow.</p></div>`;
+  }
+  return `<div class="focus">
+      <div class="focus-top"><p class="label">Current job</p><code>${escapeHtml(job.id)}</code></div>
+      <h3>${escapeHtml(job.title)}</h3>
+      <p>${escapeHtml(job.brief)}</p>
+      <dl>
+        <div><dt>Reward</dt><dd>${job.reward} cr</dd></div>
+        <div><dt>Status</dt><dd class="${reasonTone(job.decision.reason)}">${reasonWord(job.decision.reason)}</dd></div>
+      </dl>
+    </div>`;
+}
+
+function ledgerBar(ledger: Ledger): string {
+  const total = ledger.escrow + ledger.paid;
+  if (total === 0) return `<div class="bar empty"><span style="--w:100%"></span></div>`;
+  const pct = (value: number) => `${((value / total) * 100).toFixed(2)}%`;
+  const held = Math.max(0, ledger.escrow - ledger.refused);
+  return `<div class="bar" role="img" aria-label="${ledger.paid} paid, ${held} held, ${ledger.refused} refused">
+      <span class="paid" style="--w:${pct(ledger.paid)}"></span>
+      <span class="held" style="--w:${pct(held)}"></span>
+      <span class="refused" style="--w:${pct(ledger.refused)}"></span>
+    </div>`;
+}
+
 export function renderJobPage(input: JobPageInput): string {
   const focus = focusJob(input.jobs);
   const moment = momentOf(focus);
   const rail = railFor(moment);
-  const steps = ["Post", "Deliver", "Two humans", "Pay"];
+  const steps: [string, string][] = [
+    ["Post", "Escrow the reward"],
+    ["Deliver", "The worker finishes"],
+    ["Two humans", "A World ID for each seat"],
+    ["Pay", "Release on distinct IDs"],
+  ];
   const railHtml = steps
-    .map((label, index) => {
+    .map(([label, sub], index) => {
       const number = index + 1;
       const cls =
         rail.done || number < rail.current ? "done" : number === rail.current ? (rail.refused ? "bad" : "on") : "";
-      return `<li class="${cls}">${number} ${label}</li>`;
+      const current = number === rail.current && !rail.done ? ' aria-current="step"' : "";
+      const mark = cls === "done" ? ICON_CHECK : cls === "bad" ? "×" : String(number);
+      return `<li class="${cls}"${current}><span class="num">${mark}</span><div><strong>${label}</strong><small>${sub}</small></div></li>`;
     })
     .join("");
   const claim = focus ? claimReceipt(focus) : "";
@@ -275,265 +433,1018 @@ export function renderJobPage(input: JobPageInput): string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0c0d0a" />
   <title>Rebind — the pool pays two humans</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" />
   <style>
-    :root { color-scheme: dark; }
+    @view-transition { navigation: auto; }
+    :root {
+      color-scheme: dark;
+      --bg: #0c0d0a;
+      --surface: #13150f;
+      --surface-2: #181b14;
+      --surface-3: #1f231a;
+      --line: rgba(244, 241, 232, 0.07);
+      --line-2: rgba(244, 241, 232, 0.13);
+      --text: #f4f1e8;
+      --text-2: #d6d1c3;
+      --muted: #9e998c;
+      --faint: #6b675e;
+      --gold: #e3b341;
+      --gold-2: #f1cd72;
+      --gold-soft: rgba(227, 179, 65, 0.1);
+      --ok: #8fdf7a;
+      --ok-soft: rgba(143, 223, 122, 0.1);
+      --bad: #ff8d8d;
+      --bad-soft: rgba(255, 141, 141, 0.09);
+      --serif: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif;
+      --sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --r: 20px;
+    }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      font: 16px/1.45 ui-sans-serif, system-ui, sans-serif;
-      background: #12140f;
-      color: #f4f1e8;
+      min-height: 100vh;
+      font: 15px/1.55 var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
     }
-    main { max-width: 760px; margin: 0 auto; padding: 28px 20px 80px; }
-    .kicker {
-      margin: 0 0 8px;
-      font-size: 12px;
-      letter-spacing: 0.14em;
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(900px 520px at 78% -8%, rgba(227, 179, 65, 0.09), transparent 62%),
+        radial-gradient(700px 480px at -10% 30%, rgba(143, 223, 122, 0.035), transparent 60%);
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.05;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    }
+    .wrap { position: relative; z-index: 1; max-width: 1160px; margin: 0 auto; padding: 0 28px; }
+    a { color: var(--gold); text-decoration: none; }
+    a:hover { color: var(--gold-2); }
+    code { font-family: var(--mono); font-size: 0.86em; }
+    :focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 8px; }
+    ::selection { background: rgba(227, 179, 65, 0.35); }
+
+    /* nav */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: saturate(140%) blur(14px);
+      -webkit-backdrop-filter: saturate(140%) blur(14px);
+      background: rgba(12, 13, 10, 0.72);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav .wrap { display: flex; align-items: center; gap: 28px; height: 60px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); font-weight: 600; letter-spacing: -0.01em; }
+    .brand:hover { color: var(--text); }
+    .brand svg { width: 26px; height: 18px; }
+    .nav nav { display: flex; gap: 4px; }
+    .nav nav a { color: var(--muted); font-size: 14px; padding: 6px 10px; border-radius: 8px; transition: color 0.2s, background 0.2s; }
+    .nav nav a:hover { color: var(--text); background: var(--surface-2); }
+    .net {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font: 12px/1 var(--mono);
+      color: var(--muted);
+      border: 1px solid var(--line-2);
+      padding: 7px 11px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .net i { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+    .net[data-state="on"] i { background: var(--ok); box-shadow: 0 0 0 0 rgba(143, 223, 122, 0.6); animation: ping 2.4s var(--ease) infinite; }
+    .net[data-state="off"] i { background: var(--faint); }
+
+    /* hero */
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.9fr);
+      gap: 56px;
+      align-items: end;
+      padding: 76px 0 56px;
+    }
+    .eyebrow {
+      margin: 0 0 22px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font: 500 12px/1 var(--mono);
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #b7b2a6;
+      color: var(--muted);
     }
+    .eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--gold); }
     h1 {
       margin: 0;
-      font-family: Palatino, Georgia, serif;
-      font-weight: 500;
-      font-size: clamp(1.8rem, 4.4vw, 2.6rem);
-      line-height: 1.08;
-      letter-spacing: -0.03em;
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: clamp(2.8rem, 6.4vw, 5.2rem);
+      line-height: 0.98;
+      letter-spacing: -0.025em;
     }
-    .deck { margin: 14px 0 0; color: #d9d3c5; max-width: 40rem; }
-    .ledger { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 22px; }
-    .ledger article {
-      background: #181b15;
-      border: 1px solid #2c3128;
-      border-radius: 16px;
-      padding: 14px 16px;
+    h1 em { font-style: italic; color: var(--gold); }
+    .deck { margin: 24px 0 0; color: var(--text-2); max-width: 34rem; font-size: 1.06rem; line-height: 1.6; }
+    .hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+
+    .ledger-card {
+      position: relative;
+      background: linear-gradient(180deg, var(--surface-2), var(--surface));
+      border: 1px solid var(--line-2);
+      border-radius: var(--r);
+      padding: 22px 22px 18px;
+      box-shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
-    .ledger span { display: block; color: #b7b2a6; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
-    .ledger strong {
-      display: block;
-      margin-top: 4px;
-      font-family: Palatino, Georgia, serif;
-      font-size: 2rem;
-      font-weight: 500;
-      font-variant-numeric: tabular-nums;
+    .ledger-card::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(140deg, rgba(227, 179, 65, 0.45), transparent 38%);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
     }
-    .ledger .paid strong { color: #8fdf7a; }
-    .ledger .refused strong { color: #ff8d8d; }
-    .ledger em { display: block; margin-top: 4px; color: #8d887c; font-style: normal; font-size: 0.85rem; }
-    .rail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; list-style: none; margin: 22px 0 0; padding: 0; }
-    .rail li { padding: 8px 10px; border-radius: 999px; background: #181b15; color: #8d887c; font-size: 13px; text-align: center; }
-    .rail li.on { background: #e3b341; color: #12140f; font-weight: 700; }
-    .rail li.done { background: #24301f; color: #8fdf7a; }
-    .rail li.bad { background: #3a1c1c; color: #ff8d8d; font-weight: 700; }
+    .ledger-top { display: flex; justify-content: space-between; align-items: center; }
+    .label {
+      margin: 0;
+      font: 500 11px/1.2 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .live { display: inline-flex; align-items: center; gap: 6px; font: 11px/1 var(--mono); color: var(--muted); }
+    .live i { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: blink 2s ease-in-out infinite; }
+    .big { display: flex; align-items: baseline; gap: 10px; margin: 18px 0 2px; }
+    .big strong { font: 400 4rem/1 var(--serif); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--ok); }
+    .big span { color: var(--muted); font-size: 14px; }
+    .ledger-card .sub { margin: 0; color: var(--faint); font-size: 13px; }
+    .bar { display: flex; gap: 3px; height: 8px; margin: 20px 0 16px; border-radius: 99px; overflow: hidden; background: var(--surface-3); }
+    .bar span { width: 0; flex: none; border-radius: 2px; animation: grow 1.1s var(--ease) 0.35s forwards; }
+    .bar .paid { background: var(--ok); }
+    .bar .held { background: var(--gold); }
+    .bar .refused { background: repeating-linear-gradient(-45deg, var(--bad) 0 3px, rgba(255, 141, 141, 0.55) 3px 6px); }
+    .bar.empty span { background: transparent; }
+    .rows { list-style: none; margin: 0; padding: 0; }
+    .rows li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
+    .rows li i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+    .rows li span { color: var(--text-2); }
+    .rows li small { color: var(--faint); font-size: 12.5px; margin-left: 2px; }
+    .rows li b { margin-left: auto; font: 500 15px/1 var(--mono); font-variant-numeric: tabular-nums; }
+    .rows .paid i { background: var(--ok); }
+    .rows .held i { background: var(--gold); }
+    .rows .refused i { background: var(--bad); }
+    .rows .refused b { color: var(--bad); }
+
+    /* buttons */
+    .btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font: 500 14px/1 var(--sans);
+      padding: 12px 18px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.16s var(--ease), background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn svg { width: 16px; height: 16px; }
+    .btn:active { transform: scale(0.97); }
+    .btn.primary {
+      background: var(--gold);
+      color: #17140a;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 24px -10px rgba(227, 179, 65, 0.6);
+    }
+    .btn.primary:hover { background: var(--gold-2); color: #17140a; }
+    .btn.ghost { background: rgba(244, 241, 232, 0.03); color: var(--text); border-color: var(--line-2); }
+    .btn.ghost:hover { background: rgba(244, 241, 232, 0.07); border-color: rgba(244, 241, 232, 0.22); color: var(--text); }
+    .btn.lg { padding: 14px 20px; font-size: 15px; }
+    .btn.sm { padding: 9px 13px; font-size: 13px; border-radius: 10px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn[aria-busy="true"] { color: transparent !important; pointer-events: none; }
+    .btn[aria-busy="true"]::after {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      border-color: rgba(23, 20, 10, 0.85) rgba(23, 20, 10, 0.2) rgba(23, 20, 10, 0.2);
+      animation: spin 0.7s linear infinite;
+    }
+    .btn.ghost[aria-busy="true"]::after { border-color: var(--text) rgba(244, 241, 232, 0.2) rgba(244, 241, 232, 0.2); }
+
+    /* desk */
+    .desk {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 28px;
+      padding: 8px 0 0;
+      scroll-margin-top: 80px;
+    }
+    .desk-side { position: sticky; top: 84px; align-self: start; display: grid; gap: 18px; }
+    .steps { list-style: none; margin: 0; padding: 0; position: relative; }
+    .steps li { position: relative; display: flex; gap: 14px; padding: 0 0 22px; color: var(--faint); }
+    .steps li:last-child { padding-bottom: 0; }
+    .steps li::before {
+      content: "";
+      position: absolute;
+      left: 15px;
+      top: 34px;
+      bottom: 4px;
+      width: 1px;
+      background: var(--line-2);
+    }
+    .steps li:last-child::before { display: none; }
+    .steps li.done::before { background: linear-gradient(var(--ok), rgba(143, 223, 122, 0.25)); }
+    .num {
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 31px;
+      height: 31px;
+      border-radius: 50%;
+      border: 1px solid var(--line-2);
+      background: var(--surface);
+      font: 500 13px/1 var(--mono);
+      transition: all 0.3s var(--ease);
+    }
+    .num svg { width: 15px; height: 15px; }
+    .steps strong { display: block; font-weight: 500; font-size: 14.5px; color: inherit; margin-top: 5px; }
+    .steps small { display: block; font-size: 12.5px; color: var(--faint); margin-top: 1px; }
+    .steps li.done { color: var(--text-2); }
+    .steps li.done .num { border-color: rgba(143, 223, 122, 0.4); background: var(--ok-soft); color: var(--ok); }
+    .steps li.on { color: var(--text); }
+    .steps li.on .num { border-color: var(--gold); background: var(--gold); color: #17140a; box-shadow: 0 0 0 5px var(--gold-soft); }
+    .steps li.on small { color: var(--muted); }
+    .steps li.bad { color: var(--bad); }
+    .steps li.bad .num { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); font-size: 16px; box-shadow: 0 0 0 5px var(--bad-soft); }
+
+    .focus { border: 1px solid var(--line); border-radius: 16px; padding: 16px; background: rgba(19, 21, 15, 0.6); }
+    .focus.empty p:last-child { margin: 8px 0 0; color: var(--muted); font-size: 13.5px; }
+    .focus-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .focus-top code { color: var(--faint); font-size: 11.5px; }
+    .focus h3 { margin: 10px 0 0; font: 400 1.35rem/1.15 var(--serif); letter-spacing: -0.01em; }
+    .focus > p { margin: 6px 0 0; color: var(--muted); font-size: 13.5px; }
+    .focus dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0 0; }
+    .focus dl div { background: var(--surface-2); border-radius: 10px; padding: 8px 10px; }
+    .focus dt { font: 10.5px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+    .focus dd { margin: 4px 0 0; font-size: 13px; font-weight: 500; }
+    .focus dd.ok { color: var(--ok); }
+    .focus dd.bad { color: var(--bad); }
+    .focus dd.wait { color: var(--gold); }
+
     .panel {
-      margin-top: 16px;
-      background: #181b15;
-      border: 1px solid #2c3128;
-      border-radius: 18px;
-      padding: 18px 18px 16px;
+      view-transition-name: panel;
+      position: relative;
+      background: linear-gradient(180deg, var(--surface-2), var(--surface) 55%);
+      border: 1px solid var(--line-2);
+      border-radius: 24px;
+      padding: 34px 36px 32px;
+      box-shadow: 0 50px 100px -50px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+      overflow: hidden;
     }
-    .step { margin: 0; color: #e3b341; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
-    h2 { margin: 6px 0 0; font-size: 1.45rem; font-weight: 600; letter-spacing: -0.02em; }
-    .lead { margin: 8px 0 0; color: #d9d3c5; }
-    form { margin-top: 16px; display: grid; gap: 10px; }
-    label { display: grid; gap: 4px; color: #b7b2a6; font-size: 0.92rem; }
+    .step {
+      margin: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font: 500 11.5px/1 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .step::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .step.ok { color: var(--ok); }
+    .step.bad { color: var(--bad); }
+    .panel h2 { margin: 14px 0 0; font: 400 clamp(2rem, 3.6vw, 2.7rem)/1.05 var(--serif); letter-spacing: -0.02em; max-width: 30rem; }
+    .lead { margin: 12px 0 0; color: var(--text-2); max-width: 36rem; }
+    .hint { margin: 10px 0 0; color: var(--muted); font-size: 13.5px; }
+    .verdict {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      margin: 0;
+      padding: 8px 14px;
+      font: 600 13px/1 var(--mono);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      border: 2px solid currentColor;
+      border-radius: 8px;
+      transform: rotate(-6deg);
+      animation: stamp 0.55s var(--ease) 0.25s both;
+    }
+    .verdict.ok { color: var(--ok); background: var(--ok-soft); }
+    .verdict.bad { color: var(--bad); background: var(--bad-soft); }
+
+    /* forms */
+    form { margin: 0; }
+    .post { display: grid; gap: 16px; margin-top: 28px; }
+    .field { display: grid; gap: 7px; }
+    .field > span, .field > label { font-size: 13px; color: var(--muted); font-weight: 500; }
     input {
-      font: inherit; color: inherit; background: #12140f;
-      border: 1px solid #3a4034; border-radius: 10px; padding: 10px 12px;
+      width: 100%;
+      font: 15px/1.3 var(--sans);
+      color: var(--text);
+      background: rgba(12, 13, 10, 0.7);
+      border: 1px solid var(--line-2);
+      border-radius: 12px;
+      padding: 13px 14px;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
     }
-    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
-    button, a.primary, a.ghost {
-      font: inherit; cursor: pointer; border-radius: 999px; padding: 10px 16px; text-decoration: none;
+    input:hover { border-color: rgba(244, 241, 232, 0.2); }
+    input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 4px var(--gold-soft); background: var(--bg); }
+    input:user-invalid { border-color: var(--bad); box-shadow: 0 0 0 4px var(--bad-soft); }
+    .reward { position: relative; }
+    .reward input { font-family: var(--mono); font-size: 17px; padding-right: 84px; -moz-appearance: textfield; }
+    .reward input::-webkit-outer-spin-button, .reward input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .suffix { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--faint); font: 12px var(--mono); letter-spacing: 0.06em; pointer-events: none; }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      font: 500 12.5px/1 var(--mono);
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--line-2);
+      border-radius: 99px;
+      padding: 7px 11px;
+      cursor: pointer;
+      transition: all 0.18s var(--ease);
     }
-    button.primary, a.primary { background: #e3b341; color: #12140f; border: 1px solid #e3b341; font-weight: 700; }
-    button.ghost, a.ghost { background: transparent; color: #f4f1e8; border: 1px solid #3a4034; }
-    button:disabled { opacity: 0.55; cursor: wait; }
-    .code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 1.8rem; letter-spacing: 0.14em; margin: 12px 0 0;
+    .chip:hover { color: var(--text); border-color: rgba(244, 241, 232, 0.25); }
+    .chip[aria-pressed="true"] { color: #17140a; background: var(--gold); border-color: var(--gold); }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .submit-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: 6px; }
+    .submit-row .hint { margin: 0; }
+    .again { margin-top: 30px; padding-top: 24px; border-top: 1px dashed var(--line-2); }
+    .again .post { margin-top: 16px; }
+
+    /* seats */
+    .seats { display: grid; grid-template-columns: 1fr 84px 1fr; align-items: stretch; margin-top: 28px; }
+    .seat {
+      border: 1px solid var(--line-2);
+      border-radius: 16px;
+      padding: 16px 16px 14px;
+      background: rgba(12, 13, 10, 0.5);
+      transition: border-color 0.3s, box-shadow 0.3s;
+      min-width: 0;
     }
-    .hint { margin: 8px 0 0; color: #b7b2a6; }
-    .proofs, .history { list-style: none; margin: 14px 0 0; padding: 0; }
-    .proofs li, .history li {
-      display: flex; justify-content: space-between; gap: 12px;
-      padding: 8px 0; border-top: 1px solid #2c3128;
+    .seat.active { border-color: rgba(227, 179, 65, 0.55); box-shadow: 0 0 0 4px var(--gold-soft); }
+    .seat.verified { border-color: rgba(143, 223, 122, 0.3); }
+    .seat-role { margin: 0; font: 500 10.5px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+    .seat h3 { margin: 8px 0 0; font-size: 16px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .seat-status { display: flex; align-items: center; gap: 7px; margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+    .seat-status svg { width: 15px; height: 15px; }
+    .seat-status.ok { color: var(--ok); }
+    .seat-status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+    .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); animation: ping 1.8s var(--ease) infinite; }
+    .seat-sub { display: block; margin-top: 8px; color: var(--text-2); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .seat-sub.empty { color: var(--faint); }
+    .versus { display: grid; place-items: center; align-content: center; gap: 4px; }
+    .versus span {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      font: 400 22px/1 var(--serif);
+      border: 1px solid var(--line-2);
+      background: var(--surface);
+      color: var(--faint);
     }
-    .proofs em, .history em { color: #b7b2a6; font-style: normal; }
-    .receipt { margin-top: 12px; border-radius: 12px; padding: 12px 14px; }
-    .receipt p { margin: 4px 0 0; }
-    .receipt .stamp { margin: 0; font-size: 12px; letter-spacing: 0.08em; font-weight: 700; }
-    .receipt.bad { background: #2a1818; }
-    .receipt.bad .stamp { color: #ff8d8d; }
-    .receipt.wait { background: #2a2618; }
-    .receipt.wait .stamp { color: #e3b341; }
-    .take { margin-top: 28px; }
-    .take h2 { font-size: 1.2rem; }
-    .beats { display: grid; gap: 10px; margin-top: 12px; }
-    .beats article { border: 1px solid #2c3128; border-radius: 14px; padding: 12px 14px; background: #181b15; }
-    .stamp { margin: 0; font-size: 12px; letter-spacing: 0.08em; font-weight: 700; }
-    .stamp.ok { color: #8fdf7a; }
-    .stamp.bad { color: #ff8d8d; }
-    .stamp.wait { color: #e3b341; }
-    .beats h3 { margin: 4px 0 0; font-size: 1rem; }
-    .beats p { margin: 4px 0 0; color: #d9d3c5; }
-    .nums { margin-top: 6px; color: #b7b2a6; font-variant-numeric: tabular-nums; }
-    h3 { margin: 28px 0 0; font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: #b7b2a6; }
-    .foot { margin-top: 28px; color: #b7b2a6; }
-    a { color: #e3b341; }
-    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    @media (max-width: 640px) {
-      .ledger, .pair, .rail { grid-template-columns: 1fr 1fr; }
-      .rail { grid-template-columns: 1fr 1fr; }
-      button, a.primary, a.ghost { width: 100%; text-align: center; }
+    .versus small { font: 10px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); white-space: nowrap; }
+    .seats + .hint { margin-top: 16px; }
+    .seats[data-match="same"] .versus span { color: var(--bad); border-color: var(--bad); background: var(--bad-soft); animation: shake 0.5s var(--ease) 0.2s; }
+    .seats[data-match="same"] .versus small, .seats[data-match="same"] .seat-sub { color: var(--bad); }
+    .seats[data-match="same"] .seat { border-color: rgba(255, 141, 141, 0.35); }
+    .seats[data-match="differ"] .versus span { color: var(--ok); border-color: var(--ok); background: var(--ok-soft); }
+    .seats[data-match="differ"] .versus small { color: var(--ok); }
+
+    /* world code */
+    .world-start { margin-top: 24px; }
+    .code-block { margin-top: 20px; border: 1px solid var(--line-2); border-radius: 18px; padding: 18px; background: rgba(12, 13, 10, 0.55); }
+    .code-head { display: flex; justify-content: space-between; align-items: center; }
+    .copy {
+      font: 500 12px/1 var(--mono);
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--line-2);
+      border-radius: 8px;
+      padding: 6px 9px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .copy:hover { color: var(--text); }
+    .copy[data-done] { color: var(--ok); border-color: rgba(143, 223, 122, 0.4); }
+    .code { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 0; }
+    .code span {
+      display: grid;
+      place-items: center;
+      min-width: 44px;
+      height: 56px;
+      padding: 0 6px;
+      font: 500 26px/1 var(--mono);
+      color: var(--text);
+      background: var(--surface-2);
+      border: 1px solid var(--line-2);
+      border-radius: 10px;
+      animation: rise 0.5s var(--ease) both;
+    }
+    .code span:nth-child(2) { animation-delay: 0.04s; } .code span:nth-child(3) { animation-delay: 0.08s; }
+    .code span:nth-child(4) { animation-delay: 0.12s; } .code span:nth-child(5) { animation-delay: 0.16s; }
+    .code span:nth-child(6) { animation-delay: 0.2s; } .code span:nth-child(7) { animation-delay: 0.24s; }
+    .code span:nth-child(8) { animation-delay: 0.28s; } .code span:nth-child(9) { animation-delay: 0.32s; }
+    .code span.sep { min-width: 14px; background: none; border: none; color: var(--faint); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
+    .poll { margin: 12px 0 0; display: flex; align-items: center; gap: 8px; font: 12px/1.4 var(--mono); color: var(--faint); min-height: 1.4em; }
+    .poll:empty { display: none; }
+    .poll[data-live]::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: blink 1.4s ease-in-out infinite; }
+
+    .tamper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-top: 22px;
+      padding: 14px 16px;
+      border: 1px dashed var(--line-2);
+      border-radius: 14px;
+    }
+    .tamper p:last-child { margin: 5px 0 0; color: var(--muted); font-size: 13.5px; }
+    .tamper form { flex: none; }
+
+    /* notices */
+    .notice {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: start;
+      margin: -8px 0 24px;
+      padding: 13px 14px;
+      border-radius: 14px;
+      border: 1px solid;
+      animation: rise 0.45s var(--ease) both;
+    }
+    .notice + .notice { margin-top: -14px; }
+    .notice p { margin: 0; font-size: 13.5px; color: var(--text-2); }
+    .notice .notice-title { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+    .notice-icon svg { width: 20px; height: 20px; display: block; }
+    .notice.wait { background: var(--gold-soft); border-color: rgba(227, 179, 65, 0.28); }
+    .notice.wait .notice-title, .notice.wait .notice-icon { color: var(--gold); }
+    .notice.bad { background: var(--bad-soft); border-color: rgba(255, 141, 141, 0.28); }
+    .notice.bad .notice-title, .notice.bad .notice-icon { color: var(--bad); }
+    .notice-close { background: none; border: 0; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 2px; }
+    .notice-close:hover { color: var(--text); }
+    .notice.leaving { animation: fade-out 0.25s var(--ease) forwards; }
+
+    /* sections */
+    .section { padding: 72px 0 0; }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin-bottom: 18px; flex-wrap: wrap; }
+    .section-head h2 { margin: 0; font: 400 2rem/1.1 var(--serif); letter-spacing: -0.015em; }
+    .section-head p { margin: 0; color: var(--faint); font: 12px var(--mono); }
+    .history { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: rgba(19, 21, 15, 0.55); }
+    .history li {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto 84px;
+      align-items: center;
+      gap: 18px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--line);
+      transition: background 0.2s;
+    }
+    .history li:first-child { border-top: 0; }
+    .history li:hover { background: rgba(244, 241, 232, 0.025); }
+    .history li.current { background: linear-gradient(90deg, var(--gold-soft), transparent 60%); box-shadow: inset 2px 0 0 var(--gold); }
+    .h-title { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+    .h-title span { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .h-title code { color: var(--faint); font-size: 11.5px; flex: none; }
+    .h-reward { text-align: right; font: 500 15px var(--mono); font-variant-numeric: tabular-nums; }
+    .h-reward small { color: var(--faint); font-size: 11px; margin-left: 3px; }
+    .chip-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12.5px;
+      padding: 5px 10px;
+      border-radius: 99px;
+      background: var(--surface-3);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .chip-status i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .chip-status.ok { color: var(--ok); background: var(--ok-soft); }
+    .chip-status.bad { color: var(--bad); background: var(--bad-soft); }
+    .chip-status.wait { color: var(--gold); background: var(--gold-soft); }
+
+    .takes { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .take {
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--line-2);
+      border-radius: 22px;
+      padding: 24px;
+      background: linear-gradient(180deg, var(--surface-2), var(--surface));
+      min-width: 0;
+    }
+    .take-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .tag { font: 11px/1 var(--mono); color: var(--muted); border: 1px solid var(--line-2); border-radius: 99px; padding: 5px 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tag.on { color: var(--ok); border-color: rgba(143, 223, 122, 0.35); }
+    .take h3 { margin: 16px 0 0; font: 400 1.7rem/1.1 var(--serif); letter-spacing: -0.01em; }
+    .take > p { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
+    .take > p code { color: var(--text-2); }
+    .take .btn { margin-top: 20px; align-self: flex-start; }
+    .beats { list-style: none; margin: 0; padding: 0; }
+    .beats:not(:empty) { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .beats li { position: relative; padding: 0 0 18px 26px; animation: rise 0.5s var(--ease) both; animation-delay: calc(var(--i) * 110ms); }
+    .beats li::before { content: ""; position: absolute; left: 4px; top: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--faint); box-shadow: 0 0 0 4px var(--surface); z-index: 1; }
+    .beats li::after { content: ""; position: absolute; left: 8px; top: 14px; bottom: -4px; width: 1px; background: var(--line-2); }
+    .beats li:last-child::after { display: none; }
+    .beats li.ok::before { background: var(--ok); }
+    .beats li.bad::before { background: var(--bad); }
+    .beats li.wait::before { background: var(--gold); }
+    .beat-stamp { display: inline-block; font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em; padding: 4px 7px; border-radius: 6px; background: var(--surface-3); color: var(--muted); }
+    .ok > .beat-stamp { color: var(--ok); background: var(--ok-soft); }
+    .bad > .beat-stamp { color: var(--bad); background: var(--bad-soft); }
+    .wait > .beat-stamp { color: var(--gold); background: var(--gold-soft); }
+    .beats h4 { margin: 8px 0 0; font-size: 14.5px; font-weight: 500; }
+    .beats p { margin: 4px 0 0; color: var(--muted); font-size: 13.5px; }
+    .beats .nums { font: 12px var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
+    .beats .nums a { color: var(--gold); }
+    .result { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; font: 500 12.5px var(--mono); animation: rise 0.5s var(--ease) both; }
+    .result.ok { color: var(--ok); }
+    .result.bad { color: var(--bad); }
+    .result svg { width: 16px; height: 16px; }
+    .skeleton { display: grid; gap: 10px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .skeleton i { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-3), #2a2f24, var(--surface-3)); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
+    .skeleton i:nth-child(2) { width: 82%; } .skeleton i:nth-child(3) { width: 64%; }
+    .skeleton p { margin: 4px 0 0; color: var(--faint); font: 12px var(--mono); }
+
+    footer { margin-top: 96px; border-top: 1px solid var(--line); }
+    footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; padding-top: 26px; padding-bottom: 40px; color: var(--faint); font-size: 13px; }
+    footer nav { display: flex; gap: 18px; flex-wrap: wrap; }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+
+    /* motion */
+    .reveal { animation: rise 0.8s var(--ease) both; animation-delay: calc(var(--d, 0) * 70ms); }
+    @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    @keyframes fade-out { to { opacity: 0; transform: translateY(-6px); } }
+    @keyframes grow { to { width: var(--w); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes blink { 50% { opacity: 0.3; } }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+    @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(143, 223, 122, 0.55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(143, 223, 122, 0); } }
+    @keyframes stamp { from { opacity: 0; transform: rotate(-6deg) scale(1.6); } to { opacity: 1; transform: rotate(-6deg) scale(1); } }
+    @keyframes shake { 20%, 60% { transform: translateX(-3px); } 40%, 80% { transform: translateX(3px); } }
+    ::view-transition-old(panel), ::view-transition-new(panel) { animation-duration: 0.35s; animation-timing-function: var(--ease); }
+    .pulse { box-shadow: 0 0 0 0 rgba(227, 179, 65, 0.6); animation-name: ping-gold; }
+    @keyframes ping-gold { 0% { box-shadow: 0 0 0 0 rgba(227, 179, 65, 0.55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(227, 179, 65, 0); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.001ms !important; animation-delay: 0s !important; transition-duration: 0.001ms !important; }
+      html { scroll-behavior: auto; }
+    }
+
+    @media (max-width: 960px) {
+      .hero { grid-template-columns: 1fr; gap: 36px; padding: 48px 0 40px; align-items: start; }
+      .desk { grid-template-columns: 1fr; }
+      .desk-side { position: static; grid-template-columns: 1fr 1fr; align-items: start; }
+      .takes { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      .wrap { padding: 0 16px; }
+      .nav .wrap { gap: 12px; }
+      .nav nav { display: none; }
+      .desk-side { grid-template-columns: 1fr; }
+      .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+      .steps li { flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 0; }
+      .steps li::before { left: calc(50% + 20px); right: calc(-50% + 20px); top: 15px; bottom: auto; width: auto; height: 1px; }
+      .steps li.done::before { background: var(--ok); }
+      .steps strong { margin-top: 0; font-size: 12px; }
+      .steps small { display: none; }
+      .panel { padding: 24px 18px 22px; border-radius: 20px; }
+      .verdict { top: 20px; right: 16px; font-size: 11px; padding: 6px 10px; }
+      .pair { grid-template-columns: 1fr; }
+      .seats { grid-template-columns: 1fr; gap: 8px; }
+      .versus { grid-auto-flow: column; justify-content: center; gap: 10px; }
+      .versus span { width: 32px; height: 32px; font-size: 18px; }
+      .tamper { flex-direction: column; align-items: stretch; }
+      .btn { width: 100%; }
       .actions { display: grid; }
+      .actions form { display: grid; }
+      .code span { min-width: 34px; height: 46px; font-size: 20px; }
+      .history li { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }
+      .history .chip-status { grid-row: 2; justify-self: start; }
+      .h-title code { display: none; }
+      .take { padding: 20px 18px; }
+      .take .btn { align-self: stretch; }
+      .net span { max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
     }
   </style>
 </head>
 <body>
-  <main>
-    <p class="kicker">Rebind · job pool · <a href="/flow">Watch the flow</a></p>
-    <h1>The pool pays two different humans.</h1>
-    <p class="deck">One person can run the buyer and the worker and finish the job. The credits stay in escrow, and that sale does not count. A second person proves the buyer, and the same delivery gets paid.</p>
-    <section class="ledger" aria-label="Pool balances">
-      <article>
-        <span>In escrow</span>
-        <strong>${input.ledger.escrow}</strong>
-        <em>Held until two humans differ</em>
-      </article>
-      <article class="paid">
-        <span>Paid out</span>
-        <strong>${input.ledger.paid}</strong>
-        <em>The only revenue that counts</em>
-      </article>
-      <article class="refused">
-        <span>Refused</span>
-        <strong>${input.ledger.refused}</strong>
-        <em>Same human. Still in escrow.</em>
-      </article>
-    </section>
-    <ol class="rail" aria-label="Progress">${railHtml}</ol>
-    <section class="panel" aria-label="Next action">
-      ${flashHtml(input.flash)}
-      ${claim}
-      ${panel(moment, input.prompts)}
-    </section>
-    ${history(input.jobs)}
-    <section class="take" id="take">
-      <h2>Recorded take</h2>
-      <p class="deck">No second phone in the room? The server runs the payout rule on fixture subjects. This does not move the credits above. A fixture is not a World App approval.</p>
-      <button class="ghost" id="play-take" type="button">Play the recorded take</button>
-      <div class="beats" id="take-stage"></div>
-    </section>
-    <section class="take" id="chain-take">
-      <h2>On-chain take</h2>
-      <p class="deck">The same rule where settlement lives. An ERC-8183 hook reads both World subjects and reverts <code>complete()</code> when they match. The escrow locks on-chain, the sale never counts, and <code>claimRefund</code> returns the buyer's funds after expiry. Subjects here are fixtures written by the registrar key; a live registrar writes only after the server-side World check passes.</p>
-      <p class="hint" id="chain-status">Checking the chain…</p>
-      <button class="ghost" id="play-chain" type="button">Run the on-chain take</button>
-      <div class="beats" id="chain-stage"></div>
-    </section>
-    <p class="foot">Earlier cut: <a href="/desk">revoke a key</a> · <a href="/film">90-second film</a> · <a href="/flow">watch the flow</a></p>
-  </main>
-  <script>
-    const play = document.getElementById("play-take");
-    const stage = document.getElementById("take-stage");
-    play.addEventListener("click", async () => {
-      play.disabled = true;
-      stage.textContent = "Running the payout rule…";
-      try {
-        const response = await fetch("/demo/self-pay", { method: "POST" });
-        const report = await response.json();
-        stage.replaceChildren();
-        const beats = Array.isArray(report.beats) ? report.beats : [];
-        for (const beat of beats) {
-          const article = document.createElement("article");
-          const stamp = document.createElement("p");
-          const title = document.createElement("h3");
-          const detail = document.createElement("p");
-          const nums = document.createElement("p");
-          const name = typeof beat.stamp === "string" ? beat.stamp : "";
-          stamp.className = "stamp " + (name === "PAYOUT_RELEASED" ? "ok" : name === "DELIVERED" ? "wait" : "bad");
-          stamp.textContent = name;
-          title.textContent = typeof beat.title === "string" ? beat.title : "";
-          detail.textContent = typeof beat.detail === "string" ? beat.detail : "";
-          nums.className = "nums";
-          nums.textContent = "Escrow " + beat.escrow + "  ·  Paid " + beat.paid + "  ·  Refused " + beat.refused;
-          article.append(stamp, title, detail, nums);
-          stage.appendChild(article);
-        }
-        if (!report.passed) {
-          const fail = document.createElement("p");
-          fail.className = "stamp bad";
-          fail.textContent = "The take failed.";
-          stage.appendChild(fail);
-        }
-      } catch (error) {
-        stage.textContent = "The take could not run.";
-      }
-      play.disabled = false;
-    });
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="/" aria-label="Rebind home">
+        <svg viewBox="0 0 26 18" aria-hidden="true"><circle cx="9" cy="9" r="7.5" fill="none" stroke="#e3b341" stroke-width="1.6"/><circle cx="17" cy="9" r="7.5" fill="none" stroke="#f4f1e8" stroke-width="1.6" stroke-opacity="0.75"/></svg>
+        Rebind
+      </a>
+      <nav aria-label="Primary">
+        <a href="/flow">Flow</a>
+        <a href="/film">Film</a>
+        <a href="/desk">Desk</a>
+      </nav>
+      <span class="net" id="net" data-state="idle"><i></i><span>Checking chain…</span></span>
+    </div>
+  </header>
 
-    const chainPlay = document.getElementById("play-chain");
-    const chainStage = document.getElementById("chain-stage");
-    const chainStatus = document.getElementById("chain-status");
-    fetch("/chain")
-      .then((res) => res.json())
-      .then((status) => {
-        if (status.configured) {
-          chainStatus.textContent = "Settling on " + status.network + " (chain " + status.chainId + ").";
-        } else {
-          chainStatus.textContent = "No chain is configured on this server. Locally, npm run chain-self-pay boots anvil and runs the same take.";
-          chainPlay.disabled = true;
-        }
-      })
-      .catch(() => {
-        chainStatus.textContent = "Chain status did not load.";
-      });
-    chainPlay.addEventListener("click", async () => {
-      chainPlay.disabled = true;
-      chainStage.textContent = "Settling two jobs on-chain. This takes a moment…";
-      try {
-        const response = await fetch("/demo/chain-self-pay", { method: "POST" });
-        const report = await response.json();
-        chainStage.replaceChildren();
-        const beats = Array.isArray(report.beats) ? report.beats : [];
-        for (const beat of beats) {
-          const article = document.createElement("article");
-          const stamp = document.createElement("p");
-          const title = document.createElement("h3");
-          const detail = document.createElement("p");
-          const name = typeof beat.stamp === "string" ? beat.stamp : "";
-          stamp.className = "stamp " + (name === "DISTINCT_HUMANS" || name === "REFUNDED" ? "ok" : name === "SAME_HUMAN" ? "bad" : "wait");
-          stamp.textContent = name;
-          title.textContent = typeof beat.title === "string" ? beat.title : "";
-          detail.textContent = typeof beat.detail === "string" ? beat.detail : "";
-          article.append(stamp, title, detail);
-          if (typeof beat.link === "string" && typeof beat.tx === "string") {
-            const nums = document.createElement("p");
-            nums.className = "nums";
-            const anchor = document.createElement("a");
-            anchor.href = beat.link;
-            anchor.textContent = "tx " + beat.tx.slice(0, 12) + "…";
-            nums.appendChild(anchor);
-            article.appendChild(nums);
-          } else if (typeof beat.tx === "string") {
-            const nums = document.createElement("p");
-            nums.className = "nums";
-            nums.textContent = "tx " + beat.tx;
-            article.appendChild(nums);
-          }
-          chainStage.appendChild(article);
-        }
-        const verdict = document.createElement("p");
-        verdict.className = "stamp " + (report.passed ? "ok" : "bad");
-        verdict.textContent = report.passed ? "The on-chain take passed." : (report.detail || "The on-chain take failed.");
-        chainStage.appendChild(verdict);
-      } catch (error) {
-        chainStage.textContent = "The on-chain take could not run.";
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <p class="eyebrow reveal" style="--d:0">Job pool · World ID · ERC-8183</p>
+        <h1 class="reveal" style="--d:1">The pool pays <em>two different</em> humans.</h1>
+        <p class="deck reveal" style="--d:2">One person can run the buyer and the worker and finish the job. The credits stay in escrow, and that sale does not count. A second person proves the buyer, and the same delivery gets paid.</p>
+        <div class="hero-cta reveal" style="--d:3">
+          <a class="btn primary lg" href="#desk">${focus ? "Continue the job" : "Post a job"} <span aria-hidden="true">↓</span></a>
+          <a class="btn ghost lg" href="/flow">Watch the flow</a>
+        </div>
+      </div>
+      <aside class="ledger-card reveal" style="--d:2" aria-label="Pool balances">
+        <div class="ledger-top"><p class="label">Pool ledger</p><span class="live"><i></i>credits</span></div>
+        <div class="big"><strong data-count="paid" data-value="${input.ledger.paid}">${input.ledger.paid}</strong><span>paid out</span></div>
+        <p class="sub">The only revenue that counts</p>
+        ${ledgerBar(input.ledger)}
+        <ul class="rows">
+          <li class="held"><i></i><span>In escrow</span><small>Held until two humans differ</small><b data-count="escrow" data-value="${input.ledger.escrow}">${input.ledger.escrow}</b></li>
+          <li class="paid"><i></i><span>Paid out</span><small>Distinct World IDs</small><b data-count="paid2" data-value="${input.ledger.paid}">${input.ledger.paid}</b></li>
+          <li class="refused"><i></i><span>Refused</span><small>Same human. Still in escrow.</small><b data-count="refused" data-value="${input.ledger.refused}">${input.ledger.refused}</b></li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="desk reveal" style="--d:4" id="desk" aria-label="Job desk">
+      <aside class="desk-side">
+        <ol class="steps" aria-label="Progress">${railHtml}</ol>
+        ${focusCard(focus)}
+      </aside>
+      <section class="panel" aria-label="Next action">
+        ${flashHtml(input.flash)}
+        ${claim}
+        ${panel(moment, input.prompts)}
+      </section>
+    </section>
+
+    ${history(input.jobs, focus?.id ?? null)}
+
+    <section class="section reveal" style="--d:6" aria-labelledby="proof-h">
+      <div class="section-head">
+        <h2 id="proof-h">No second phone in the room?</h2>
+        <p>Same payout rule, run for you</p>
+      </div>
+      <div class="takes">
+        <article class="take" id="take">
+          <div class="take-top"><p class="label">Recorded take</p><span class="tag">server · fixtures</span></div>
+          <h3>Replay the payout rule</h3>
+          <p>The server runs the payout rule on fixture subjects. This does not move the credits above. A fixture is not a World App approval.</p>
+          <button class="btn ghost" id="play-take" type="button">Play the recorded take</button>
+          <ol class="beats" id="take-stage"></ol>
+        </article>
+        <article class="take" id="chain-take">
+          <div class="take-top"><p class="label">On-chain take</p><span class="tag" id="chain-tag">checking…</span></div>
+          <h3>Settle it where money lives</h3>
+          <p>An ERC-8183 hook reads both World subjects and reverts <code>complete()</code> when they match. The escrow locks on-chain, the sale never counts, and <code>claimRefund</code> returns the buyer's funds after expiry. Subjects here are fixtures written by the registrar key; a live registrar writes only after the server-side World check passes.</p>
+          <p class="hint" id="chain-status">Checking the chain…</p>
+          <button class="btn ghost" id="play-chain" type="button">Run the on-chain take</button>
+          <ol class="beats" id="chain-stage"></ol>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Rebind · ETHGlobal Tokyo 2026</span>
+      <nav aria-label="Earlier cuts"><a href="/desk">Revoke a key</a><a href="/film">90-second film</a><a href="/flow">Watch the flow</a></nav>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const CHECK = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10.5l3.2 3.2L15 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+      function store(key, value) {
+        try {
+          if (value === undefined) return sessionStorage.getItem(key);
+          sessionStorage.setItem(key, value);
+        } catch (error) {}
+        return null;
       }
-      chainPlay.disabled = false;
-    });
+
+      // Ledger numbers tick from what this tab saw last to what the server holds now.
+      document.querySelectorAll("[data-count]").forEach((node) => {
+        const key = "rebind.ledger." + node.dataset.count;
+        const target = Number(node.dataset.value) || 0;
+        const seen = store(key);
+        store(key, String(target));
+        const from = seen === null ? 0 : Number(seen) || 0;
+        if (reduce || from === target) return;
+        const start = performance.now();
+        const span = 900;
+        node.textContent = String(from);
+        function frame(now) {
+          const t = Math.min(1, (now - start) / span);
+          const eased = 1 - Math.pow(1 - t, 4);
+          node.textContent = String(Math.round(from + (target - from) * eased));
+          if (t < 1) requestAnimationFrame(frame);
+        }
+        setTimeout(() => requestAnimationFrame(frame), 250);
+      });
+
+      // Submits show progress and cannot be sent twice.
+      document.querySelectorAll("form").forEach((form) => {
+        form.addEventListener("submit", () => {
+          const button = form.querySelector("button[type=submit]");
+          if (!button) return;
+          setTimeout(() => {
+            button.setAttribute("aria-busy", "true");
+            button.disabled = true;
+          }, 0);
+        });
+      });
+
+      document.querySelectorAll("[data-dismiss]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const box = button.closest(".notice");
+          if (!box) return;
+          box.classList.add("leaving");
+          setTimeout(() => box.remove(), 240);
+          if (location.search) history.replaceState(null, "", location.pathname + location.hash);
+        });
+      });
+
+      // Reward presets.
+      document.querySelectorAll(".post").forEach((form) => {
+        const input = form.querySelector("input[name=reward]");
+        const chips = form.querySelectorAll("[data-reward]");
+        if (!input) return;
+        function sync() {
+          chips.forEach((chip) => chip.setAttribute("aria-pressed", String(chip.dataset.reward === input.value.trim())));
+        }
+        chips.forEach((chip) =>
+          chip.addEventListener("click", () => {
+            input.value = chip.dataset.reward;
+            sync();
+            input.focus();
+          })
+        );
+        input.addEventListener("input", sync);
+        sync();
+      });
+
+      document.querySelectorAll("[data-copy]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(button.dataset.copy);
+            button.textContent = "Copied";
+            button.setAttribute("data-done", "");
+            setTimeout(() => {
+              button.textContent = "Copy";
+              button.removeAttribute("data-done");
+            }, 1600);
+          } catch (error) {}
+        });
+      });
+
+      // While a World code is on screen, check for approval every few seconds.
+      const poll = document.querySelector("[data-poll]");
+      if (poll) {
+        const job = poll.dataset.job;
+        const role = poll.dataset.role;
+        const started = Date.now();
+        const limit = 3 * 60 * 1000;
+        let timer = 0;
+        let busy = false;
+        let checks = 0;
+        function say(text, live) {
+          poll.textContent = text;
+          if (live) poll.setAttribute("data-live", "");
+          else poll.removeAttribute("data-live");
+        }
+        function schedule(delay) {
+          clearTimeout(timer);
+          if (Date.now() - started > limit) {
+            say("Auto-check paused. Use the button once you approve.", false);
+            return;
+          }
+          timer = setTimeout(check, delay);
+        }
+        async function check() {
+          if (busy) return;
+          busy = true;
+          try {
+            const response = await fetch("/jobs/" + encodeURIComponent(job) + "/world/pull", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ role: role }),
+            });
+            const body = await response.json().catch(() => ({}));
+            checks += 1;
+            if (response.status === 202) {
+              say("Waiting for approval in World App · checked " + checks + "×", true);
+              schedule(5000);
+            } else if (response.ok && body.attached) {
+              say("Approved. Updating…", false);
+              location.replace("/#desk");
+            } else if (response.status === 403) {
+              location.replace("/?flash=not-approved#desk");
+            } else {
+              location.replace("/?flash=world-error#desk");
+            }
+          } catch (error) {
+            say("Connection hiccup. Retrying…", true);
+            schedule(8000);
+          }
+          busy = false;
+        }
+        say("Waiting for approval in World App", true);
+        schedule(5000);
+        document.addEventListener("visibilitychange", () => {
+          if (!document.hidden) schedule(300);
+        });
+      }
+
+      function beatTone(name, okNames, badNames) {
+        if (okNames.indexOf(name) >= 0) return "ok";
+        if (badNames.indexOf(name) >= 0) return "bad";
+        return "wait";
+      }
+
+      function skeleton(stage, text) {
+        stage.replaceChildren();
+        const box = document.createElement("div");
+        box.className = "skeleton";
+        box.innerHTML = "<i></i><i></i><i></i>";
+        const note = document.createElement("p");
+        note.textContent = text;
+        box.appendChild(note);
+        stage.appendChild(box);
+      }
+
+      function beatItem(beat, index, tone) {
+        const item = document.createElement("li");
+        item.className = tone;
+        item.style.setProperty("--i", String(index));
+        const stamp = document.createElement("span");
+        stamp.className = "beat-stamp";
+        stamp.textContent = typeof beat.stamp === "string" ? beat.stamp : "";
+        const title = document.createElement("h4");
+        title.textContent = typeof beat.title === "string" ? beat.title : "";
+        const detail = document.createElement("p");
+        detail.textContent = typeof beat.detail === "string" ? beat.detail : "";
+        item.append(stamp, title, detail);
+        return item;
+      }
+
+      function verdict(stage, passed, text, index) {
+        const line = document.createElement("p");
+        line.className = "result " + (passed ? "ok" : "bad");
+        line.style.animationDelay = index * 110 + "ms";
+        line.innerHTML = passed ? CHECK : "";
+        line.appendChild(document.createTextNode(text));
+        stage.appendChild(line);
+      }
+
+      const play = document.getElementById("play-take");
+      const stage = document.getElementById("take-stage");
+      play.addEventListener("click", async () => {
+        play.disabled = true;
+        play.setAttribute("aria-busy", "true");
+        skeleton(stage, "Running the payout rule…");
+        try {
+          const response = await fetch("/demo/self-pay", { method: "POST" });
+          const report = await response.json();
+          await new Promise((resolve) => setTimeout(resolve, reduce ? 0 : 450));
+          stage.replaceChildren();
+          const beats = Array.isArray(report.beats) ? report.beats : [];
+          beats.forEach((beat, index) => {
+            const name = typeof beat.stamp === "string" ? beat.stamp : "";
+            const tone = name === "PAYOUT_RELEASED" ? "ok" : name === "DELIVERED" ? "wait" : "bad";
+            const item = beatItem(beat, index, tone);
+            const nums = document.createElement("p");
+            nums.className = "nums";
+            nums.textContent = "escrow " + beat.escrow + "  ·  paid " + beat.paid + "  ·  refused " + beat.refused;
+            item.appendChild(nums);
+            stage.appendChild(item);
+          });
+          verdict(stage, !!report.passed, report.passed ? "The take passed." : "The take failed.", beats.length);
+          play.textContent = "Play it again";
+        } catch (error) {
+          stage.replaceChildren();
+          verdict(stage, false, "The take could not run.", 0);
+        }
+        play.disabled = false;
+        play.removeAttribute("aria-busy");
+      });
+
+      const net = document.getElementById("net");
+      const chainTag = document.getElementById("chain-tag");
+      const chainPlay = document.getElementById("play-chain");
+      const chainStage = document.getElementById("chain-stage");
+      const chainStatus = document.getElementById("chain-status");
+      fetch("/chain")
+        .then((res) => res.json())
+        .then((status) => {
+          if (status.configured) {
+            chainStatus.textContent = "Settling on " + status.network + " (chain " + status.chainId + ").";
+            net.dataset.state = "on";
+            net.lastElementChild.textContent = status.network;
+            chainTag.textContent = status.network;
+            chainTag.classList.add("on");
+          } else {
+            chainStatus.textContent = "No chain is configured on this server. Locally, npm run chain-self-pay boots anvil and runs the same take.";
+            chainPlay.disabled = true;
+            net.dataset.state = "off";
+            net.lastElementChild.textContent = "Off-chain";
+            chainTag.textContent = "not configured";
+          }
+        })
+        .catch(() => {
+          chainStatus.textContent = "Chain status did not load.";
+          net.dataset.state = "off";
+          net.lastElementChild.textContent = "Chain unknown";
+          chainTag.textContent = "unknown";
+        });
+
+      chainPlay.addEventListener("click", async () => {
+        chainPlay.disabled = true;
+        chainPlay.setAttribute("aria-busy", "true");
+        skeleton(chainStage, "Settling two jobs on-chain. This takes a moment…");
+        try {
+          const response = await fetch("/demo/chain-self-pay", { method: "POST" });
+          const report = await response.json();
+          chainStage.replaceChildren();
+          const beats = Array.isArray(report.beats) ? report.beats : [];
+          beats.forEach((beat, index) => {
+            const name = typeof beat.stamp === "string" ? beat.stamp : "";
+            const item = beatItem(beat, index, beatTone(name, ["DISTINCT_HUMANS", "REFUNDED"], ["SAME_HUMAN"]));
+            if (typeof beat.tx === "string") {
+              const nums = document.createElement("p");
+              nums.className = "nums";
+              if (typeof beat.link === "string") {
+                const anchor = document.createElement("a");
+                anchor.href = beat.link;
+                anchor.target = "_blank";
+                anchor.rel = "noopener";
+                anchor.textContent = "tx " + beat.tx.slice(0, 12) + "… ↗";
+                nums.appendChild(anchor);
+              } else {
+                nums.textContent = "tx " + beat.tx;
+              }
+              item.appendChild(nums);
+            }
+            chainStage.appendChild(item);
+          });
+          verdict(
+            chainStage,
+            !!report.passed,
+            report.passed ? "The on-chain take passed." : report.detail || "The on-chain take failed.",
+            beats.length
+          );
+          chainPlay.textContent = "Run it again";
+        } catch (error) {
+          chainStage.replaceChildren();
+          verdict(chainStage, false, "The on-chain take could not run.", 0);
+        }
+        chainPlay.disabled = false;
+        chainPlay.removeAttribute("aria-busy");
+      });
+    })();
   </script>
 </body>
 </html>`;
