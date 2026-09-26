@@ -29,29 +29,70 @@ export function walkthroughEmbed(): { section: string; tail: string } {
       </div>
       <div class="panel demo-panel">
         <ol class="demo-progress" aria-label="Demo progress">
-          <li id="demo-step-0" aria-current="step">1. Fund</li><li id="demo-step-1">2. Deliver</li><li id="demo-step-2">3. Buyer check</li><li id="demo-step-3">4. Worker check &amp; payout</li>
+          <li id="demo-step-0" aria-current="step">Fund</li><li id="demo-step-1">Deliver</li><li id="demo-step-2">Buyer check</li><li id="demo-step-3">Worker check &amp; payout</li>
         </ol>
         <div class="demo-panel-layout"><div>
         <h3 id="demo-title">A sample job, ready to go</h3>
         <p id="demo-detail">Brief: write five bullets covering a project’s benefit, users, and next steps. Reward: 40 demo credits.</p>
-        <p class="hint">Sample buyer → Sample worker · Test identities only</p>
+        <p class="demo-cast"><span class="buyer">Sample buyer</span><i aria-hidden="true">→</i><span class="worker">Sample worker</span><em>Test identities only</em></p>
         <p id="demo-delivery" hidden></p>
-        <p id="demo-balance">Demo escrow: 0 · Demo paid: 0</p>
+        <div id="demo-balance" class="demo-stats" aria-live="polite"><div class="held"><small>Demo escrow</small><b id="demo-escrow">0</b></div><div class="paid"><small>Demo paid</small><b id="demo-paid">0</b></div></div>
         <div class="actions"><button class="btn primary" id="demo-next" type="button">Create &amp; fund sample job</button><button class="btn ghost" id="demo-reset" type="button" hidden>Start again</button></div>
         <p class="hint" id="demo-feedback" role="status" aria-live="polite"></p>
-        <p class="hint">This simulation does not move funds or verify real people. For wallet settlement, each person approves in their wallet and World App.</p>
+        <p class="hint demo-note">Simulation only: no funds move and no real people are verified.</p>
         </div>${spatialView({ id: "demo-payment", mode: "demo" })}</div>
       </div>
     </section>
     <style>
       #in-app-demo { scroll-margin-top: 100px; margin-bottom: 48px; }
       .demo-panel h3 { font: 400 1.8rem/1.2 var(--serif); color: var(--navy); margin: 24px 0 12px; }
-      .demo-progress { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; list-style: none; margin: 0; padding: 0; }
-      .demo-progress li { border-top: 3px solid var(--line-2); padding-top: 10px; color: var(--muted); font-size: 13px; }
-      .demo-progress li[aria-current] { border-color: var(--accent); color: var(--navy); }
-      .demo-progress li[data-done] { border-color: var(--ok); color: var(--ok); }
-      #demo-balance { font: 13px/1.5 var(--mono); padding: 14px 0; border-block: 1px solid var(--line); }
-      #demo-delivery { padding: 16px; background: var(--surface-2); border-radius: 12px; }
+      .demo-progress { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; list-style: none; margin: 0; padding: 0; counter-reset: dp; }
+      .demo-progress li {
+        counter-increment: dp;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface-2);
+        color: var(--muted);
+        font-size: 13.5px;
+        font-weight: 500;
+        transition: all 0.3s var(--ease);
+      }
+      .demo-progress li::before {
+        content: counter(dp);
+        flex: none;
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 1px solid var(--line-2);
+        background: var(--surface);
+        font: 600 12px/1 var(--mono);
+      }
+      .demo-progress li[aria-current] { border-color: var(--accent); background: var(--surface); color: var(--navy); box-shadow: 0 0 0 4px var(--accent-soft); }
+      .demo-progress li[aria-current]::before { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .demo-progress li[data-done] { border-color: rgba(34, 179, 122, 0.35); background: var(--ok-soft); color: var(--ok); }
+      .demo-progress li[data-done]::before { content: "✓"; background: var(--ok-bright); border-color: var(--ok-bright); color: #fff; }
+      #demo-detail { color: var(--text-2); }
+      .demo-cast { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 13px; }
+      .demo-cast span { padding: 5px 10px; border-radius: 99px; font-weight: 500; }
+      .demo-cast .buyer { background: var(--accent-soft); color: var(--accent); }
+      .demo-cast .worker { background: rgba(234, 107, 67, 0.12); color: #c4532f; }
+      .demo-cast i { font-style: normal; color: var(--faint); }
+      .demo-cast em { font-style: normal; margin-left: 4px; color: var(--muted); }
+      .demo-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0 4px; }
+      .demo-stats > div { padding: 12px 14px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); }
+      .demo-stats small { display: flex; align-items: center; gap: 7px; font: 500 10.5px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+      .demo-stats small::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--sun); }
+      .demo-stats .paid small::before { background: var(--ok-bright); }
+      .demo-stats b { display: block; margin-top: 6px; font: 400 2rem/1 var(--serif); color: var(--navy); font-variant-numeric: tabular-nums; }
+      .demo-stats .paid b { color: var(--ok); }
+      #demo-delivery { margin: 16px 0 0; padding: 12px 14px; background: var(--surface-3); border-radius: 12px; font-size: 14px; color: var(--text-2); }
+      .demo-note { font-size: 12.5px; }
       @media (max-width: 600px) { .demo-progress { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     </style>`,
     tail: `<script>
@@ -67,7 +108,8 @@ export function walkthroughEmbed(): { section: string; tail: string } {
         document.getElementById("demo-payment").setAttribute("data-job", JSON.stringify(current ? current.job : null));
         document.getElementById("demo-title").textContent = current ? current.title : "A sample job, ready to go";
         document.getElementById("demo-detail").textContent = current ? current.detail : "Brief: write five bullets covering a project’s benefit, users, and next steps. Reward: 40 demo credits.";
-        document.getElementById("demo-balance").textContent = "Demo escrow: " + (current ? current.ledger.escrow : 0) + " · Demo paid: " + (current ? current.ledger.paid : 0);
+        document.getElementById("demo-escrow").textContent = String(current ? current.ledger.escrow : 0);
+        document.getElementById("demo-paid").textContent = String(current ? current.ledger.paid : 0);
         var delivery = document.getElementById("demo-delivery");
         delivery.hidden = !current || !current.job.note;
         delivery.textContent = current && current.job.note ? "Sample delivery: " + current.job.note : "";

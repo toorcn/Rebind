@@ -1127,15 +1127,73 @@ export function renderJobPage(input: JobPageInput): string {
       .nav-end .tag { font-size: 10px; }
     }
 
-    .demo-page { --bg: #faf8f1; --surface-2: #fffdf7; --surface-3: #f2eddf; --accent: #856218; --accent-soft: #f2ead4; }
-    .demo-page::before, .demo-page::after { display: none; }
-    .demo-page .nav { background: rgba(250, 248, 241, 0.96); }
-    .demo-page h1 em { background: none; color: var(--accent); }
-    .demo-banner { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; padding: 18px 20px; margin-top: 28px; background: var(--surface-3); border-left: 3px solid var(--accent); font-size: 14px; }
+    .demo-banner {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      align-items: center;
+      margin-top: 28px;
+      padding: 12px 14px 12px 12px;
+      background: var(--sun-soft);
+      border: 1px solid rgba(246, 180, 14, 0.4);
+      border-radius: 14px;
+      font-size: 13.5px;
+    }
+    .demo-banner strong {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 99px;
+      background: var(--sun);
+      color: #3b2a00;
+      font: 600 11px/1 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
     .demo-banner span { flex: 1; min-width: 220px; color: var(--text-2); }
     .demo-banner a { font-weight: 500; }
-    .demo-hero { grid-template-columns: 1fr; padding-bottom: 36px; }
-    .demo-hero h1 { font-size: clamp(2.6rem, 5vw, 4rem); }
+    .demo-hero { padding-bottom: 48px; }
+    .demo-hero h1 { font-size: clamp(2.6rem, 5.4vw, 4.4rem); }
+    .demo-plan {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      padding: 22px 22px 14px;
+      box-shadow: var(--shadow-lg);
+    }
+    .demo-plan::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(140deg, rgba(88, 105, 235, 0.55), rgba(183, 233, 212, 0.6) 40%, transparent 70%);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+    .demo-plan h2 { margin: 12px 0 4px; font: 400 1.7rem/1.1 var(--serif); color: var(--navy); letter-spacing: -0.01em; }
+    .plan { list-style: none; margin: 14px 0 0; padding: 0; }
+    .plan li { position: relative; display: flex; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+    .plan li > span {
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font: 600 13px/1 var(--mono);
+    }
+    .plan li.pay > span { background: var(--ok-soft); color: var(--ok); }
+    .plan li.hold > span { background: var(--sun-soft); color: var(--sun-ink); }
+    .plan strong { display: block; font-size: 14.5px; font-weight: 600; color: var(--navy); }
+    .plan small { display: block; margin-top: 1px; font-size: 13px; color: var(--muted); }
+    .needs li:nth-child(n) .need-icon.ok { background: var(--ok-soft); color: var(--ok); }
     .wallet-page #wallet-desk { margin-top: 0; }
     .demo-page .takes { grid-template-columns: 1fr; }
     .demo-panel { view-transition-name: none; }
@@ -1183,8 +1241,42 @@ export function renderJobPage(input: JobPageInput): string {
     .demo-entry small { display: block; margin-top: 2px; font-size: 13px; color: var(--muted); }
     .demo-entry-icon { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 11px; }
     .demo-entry-go { margin-left: auto; color: var(--accent); font-size: 18px; transition: transform 0.2s var(--ease); }
-    .advanced-demo > summary { padding: 0 0 24px; color: var(--text-2); }
-    .advanced-demo > summary small { display: block; margin-top: 6px; color: var(--muted); font-weight: 400; }
+    .demo-page .workspace.advanced-demo, .demo-page .demos { padding-top: 0; border-top: 0; }
+    .demo-page .demos { margin-top: 14px; }
+    .advanced-demo > summary, .demos > summary {
+      list-style: none;
+      position: relative;
+      display: block;
+      padding: 18px 60px 18px 20px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      color: var(--navy);
+      font-size: 15.5px;
+      font-weight: 600;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .advanced-demo > summary::-webkit-details-marker, .demos > summary::-webkit-details-marker { display: none; }
+    .advanced-demo > summary:hover, .demos > summary:hover { color: var(--navy); border-color: rgba(88, 105, 235, 0.45); }
+    .advanced-demo > summary::after, .demos > summary::after {
+      content: "+";
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font: 500 18px/1 var(--sans);
+    }
+    .advanced-demo[open] > summary::after, .demos[open] > summary::after { content: "−"; }
+    .advanced-demo[open] > summary, .demos[open] > summary { margin-bottom: 24px; }
+    .advanced-demo > summary small, .demos > summary small { display: block; margin-top: 4px; color: var(--muted); font-size: 13.5px; font-weight: 400; }
 
     @media (max-width: 960px) {
       .hero { grid-template-columns: 1fr; gap: 36px; padding: 48px 0 40px; align-items: start; }
@@ -1255,11 +1347,29 @@ export function renderJobPage(input: JobPageInput): string {
     <div class="demo-banner"><strong>Demo only</strong><span>App credits only. These jobs do not move tokens or change your wallet balance.</span><a href="/">Back to wallet jobs →</a></div>
     <section class="hero demo-hero">
       <div>
-        <p class="eyebrow">Learn the payment rule</p>
-        <h1>Follow a job.<br /><em>See how payment works.</em></h1>
-        <p class="deck">Fund a sample job, submit the work, and see why payment needs two different people. The guided demo uses sample identities and credits—no wallet or World App needed.</p>
-        <div class="hero-cta"><a class="btn primary" href="#in-app-demo">Start the guided demo ↓</a>${focus ? '<a class="text-link" href="#desk">Continue your credit sandbox job ↓</a>' : ""}</div>
+        <p class="eyebrow reveal" style="--d:0">Guided demo · Sample credits</p>
+        <h1 class="reveal" style="--d:1">Follow a job.<br /><em>See how payment works.</em></h1>
+        <p class="deck reveal" style="--d:2">Fund a sample job, submit the work, and see why payment needs <mark>two different people</mark>.</p>
+        <div class="hero-cta reveal" style="--d:3"><a class="btn primary lg" href="#in-app-demo">Start the guided demo <span aria-hidden="true">↓</span></a>${focus ? '<a class="text-link" href="#desk">Continue your credit sandbox job ↓</a>' : ""}</div>
+        <div class="needs reveal" style="--d:4">
+          <p class="label">You won’t need</p>
+          <ul>
+            <li><span class="need-icon ok" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M5 10.5l3.2 3.2L15 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>No wallet</li>
+            <li><span class="need-icon ok" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M5 10.5l3.2 3.2L15 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>No World App</li>
+            <li><span class="need-icon ok" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M5 10.5l3.2 3.2L15 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>No real tokens</li>
+          </ul>
+        </div>
       </div>
+      <aside class="demo-plan reveal" style="--d:2" aria-label="What happens in the demo">
+        <div class="ledger-top"><p class="label">In this demo</p><span class="tag">4 steps</span></div>
+        <h2>One job, start to payout</h2>
+        <ol class="plan">
+          <li><span>1</span><div><strong>Fund</strong><small>40 sample credits go into escrow</small></div></li>
+          <li><span>2</span><div><strong>Deliver</strong><small>The sample worker submits the work</small></div></li>
+          <li class="hold"><span>3</span><div><strong>Buyer check</strong><small>Verified, but payment still waits</small></div></li>
+          <li class="pay"><span>4</span><div><strong>Worker check &amp; payout</strong><small>Two different people, so it pays</small></div></li>
+        </ol>
+      </aside>
     </section>
 ` : `
     <section class="hero">
@@ -1329,7 +1439,7 @@ export function renderJobPage(input: JobPageInput): string {
     </details>
 
     <details class="section demos reveal" style="--d:6">
-      <summary>Explore payment checks</summary>
+      <summary>Explore payment checks<small>Simulate blocked and successful payouts with test identities.</small></summary>
       <p class="hint">No second person available? Use test identities to see blocked payments and successful payouts.</p>
       <div class="takes">
         <article class="take" id="take">

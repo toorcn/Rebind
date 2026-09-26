@@ -21,7 +21,7 @@ for (const root of document.querySelectorAll('[data-spatial]')) {
     const reason = root.querySelector('.sv-reason'); if (reason) reason.textContent = model.reason;
     const fallback = root.querySelector('.sv-fallback');
     fallback.children[0].textContent = model.mode === 'people' ? (separate ? 'Person A → Buyer · Person B → Worker' : 'One person → Buyer & worker') : 'Buyer → Escrow → Worker';
-    fallback.children[1].textContent = model.status + '. ' + model.detail;
+    fallback.children[1].textContent = model.status.replace(/\.$/, '') + '. ' + model.detail;
     scene?.update(model);
     clearTimeout(expiryTimer);
     const remaining = model.expiresAt * 1000 - Date.now();
