@@ -1,5 +1,5 @@
 import type { Server } from "http";
-import { createApp } from "./app";
+import { createApp } from "./paygate";
 import { AgentBookRegistry, type AgentRecord } from "./registry";
 import { signAgentRequest } from "./sign";
 

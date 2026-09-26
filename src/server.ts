@@ -1,9 +1,14 @@
-import { createApp } from "./app";
+// This file must import Express itself. Vercel uses that import to pick the
+// Node entry. The route table lives in paygate.ts.
+import express from "express";
+import { createApp } from "./paygate";
 import { runFilm } from "./film-run";
 import { AgentBookRegistry } from "./registry";
 
 const port = Number(process.env.PORT ?? "43210");
 const host = process.env.HOST ?? "0.0.0.0";
+
+void express;
 
 const foil = process.env.FOIL_MODE === "1";
 const registry = new AgentBookRegistry();
