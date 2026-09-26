@@ -14,6 +14,22 @@ Open http://127.0.0.1:43210 . `self-pay` prints `SAME_HUMAN`, `CLIENT_CLAIM_IGNO
 
 The earlier revoke desk is still at `/desk`. The 90-second cut is at `/film`.
 
+## On-chain settlement
+
+The same payout rule where settlement lives. `contracts/` is a foundry project with an [ERC-8183](https://eips.ethereum.org/EIPS/eip-8183) hook: `TwoHumansHook.beforeAction` reads the World subject of the job's client and provider from `HumanRegistry` and reverts `complete()` with `SameHuman` when they match, or `Unproven` when either side has none. Escrow locks visibly in `fund()`; settlement is the step that refuses. `claimRefund` is not hookable in ERC-8183, so the buyer recovers the budget after expiry — the sale never counts and nobody's funds are hostage.
+
+```bash
+# one-time: install foundry, then inside contracts/
+forge install OpenZeppelin/openzeppelin-contracts --no-commit
+forge install foundry-rs/forge-std --no-commit
+forge build
+forge test
+npm run chain-artifacts   # regenerates src/chain-artifacts.ts from contracts/out
+npm run chain-self-pay    # boots anvil, deploys, runs the two-job take
+```
+
+`chain-self-pay` prints `ESCROW_LOCKED`, `SAME_HUMAN` (a mined, failed `complete()`), `REFUNDED`, `DISTINCT_HUMANS`, then `CHAIN_SELF_PAY_PASSED`. The desk's on-chain panel (`POST /demo/chain-self-pay`) runs the same take against the chain named by `CHAIN_RPC_URL` + `CHAIN_REGISTRAR_KEY` (optional `CHAIN_CLIENT_KEY`, `CHAIN_PROVIDER_KEY`, `CHAIN_ID`, `CHAIN_NETWORK`, `CHAIN_EXPLORER`, and the four `CHAIN_*_ADDRESS` values to attach instead of deploy). With none set, the route answers 501 and the panel says so.
+
 ## Revoke desk
 
 Default `npm run dev` is **win** mode: a revoked key is denied on every grant, and a rotated key pays only after the server validates a rebind.

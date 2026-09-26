@@ -10,11 +10,14 @@
     "win-revoke": "tsx src/win-revoke.ts",
     "film": "tsx src/film.ts",
     "self-pay": "tsx src/self-pay.ts",
+    "chain-self-pay": "tsx src/chain-self-pay.ts",
+    "chain-artifacts": "node contracts/gen-artifacts.mjs",
     "typecheck": "tsc --noEmit"
   },
   "license": "ISC",
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "viem": "^2.56.9"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

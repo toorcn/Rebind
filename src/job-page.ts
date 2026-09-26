@@ -426,6 +426,13 @@ export function renderJobPage(input: JobPageInput): string {
       <button class="ghost" id="play-take" type="button">Play the recorded take</button>
       <div class="beats" id="take-stage"></div>
     </section>
+    <section class="take" id="chain-take">
+      <h2>On-chain take</h2>
+      <p class="deck">The same rule where settlement lives. An ERC-8183 hook reads both World subjects and reverts <code>complete()</code> when they match. The escrow locks on-chain, the sale never counts, and <code>claimRefund</code> returns the buyer's funds after expiry. Subjects here are fixtures written by the registrar key; a live registrar writes only after the server-side World check passes.</p>
+      <p class="hint" id="chain-status">Checking the chain…</p>
+      <button class="ghost" id="play-chain" type="button">Run the on-chain take</button>
+      <div class="beats" id="chain-stage"></div>
+    </section>
     <p class="foot">Earlier cut: <a href="/desk">revoke a key</a> · <a href="/film">90-second film</a></p>
   </main>
   <script>
@@ -465,6 +472,67 @@ export function renderJobPage(input: JobPageInput): string {
         stage.textContent = "The take could not run.";
       }
       play.disabled = false;
+    });
+
+    const chainPlay = document.getElementById("play-chain");
+    const chainStage = document.getElementById("chain-stage");
+    const chainStatus = document.getElementById("chain-status");
+    fetch("/chain")
+      .then((res) => res.json())
+      .then((status) => {
+        if (status.configured) {
+          chainStatus.textContent = "Settling on " + status.network + " (chain " + status.chainId + ").";
+        } else {
+          chainStatus.textContent = "No chain is configured on this server. Locally, npm run chain-self-pay boots anvil and runs the same take.";
+          chainPlay.disabled = true;
+        }
+      })
+      .catch(() => {
+        chainStatus.textContent = "Chain status did not load.";
+      });
+    chainPlay.addEventListener("click", async () => {
+      chainPlay.disabled = true;
+      chainStage.textContent = "Settling two jobs on-chain. This takes a moment…";
+      try {
+        const response = await fetch("/demo/chain-self-pay", { method: "POST" });
+        const report = await response.json();
+        chainStage.replaceChildren();
+        const beats = Array.isArray(report.beats) ? report.beats : [];
+        for (const beat of beats) {
+          const article = document.createElement("article");
+          const stamp = document.createElement("p");
+          const title = document.createElement("h3");
+          const detail = document.createElement("p");
+          const name = typeof beat.stamp === "string" ? beat.stamp : "";
+          stamp.className = "stamp " + (name === "DISTINCT_HUMANS" || name === "REFUNDED" ? "ok" : name === "SAME_HUMAN" ? "bad" : "wait");
+          stamp.textContent = name;
+          title.textContent = typeof beat.title === "string" ? beat.title : "";
+          detail.textContent = typeof beat.detail === "string" ? beat.detail : "";
+          article.append(stamp, title, detail);
+          if (typeof beat.link === "string" && typeof beat.tx === "string") {
+            const nums = document.createElement("p");
+            nums.className = "nums";
+            const anchor = document.createElement("a");
+            anchor.href = beat.link;
+            anchor.textContent = "tx " + beat.tx.slice(0, 12) + "…";
+            nums.appendChild(anchor);
+            article.appendChild(nums);
+          } else if (typeof beat.tx === "string") {
+            const nums = document.createElement("p");
+            nums.className = "nums";
+            nums.textContent = "tx " + beat.tx;
+            article.appendChild(nums);
+          }
+          chainStage.appendChild(article);
+        }
+        const verdict = document.createElement("p");
+        verdict.className = "stamp " + (report.passed ? "ok" : "bad");
+        verdict.textContent = report.passed ? "The on-chain take passed." : (report.detail || "The on-chain take failed.");
+        chainStage.appendChild(verdict);
+      } catch (error) {
+        chainStage.textContent = "The on-chain take could not run.";
+      }
+      chainPlay.disabled = false;
     });
   </script>
 </body>

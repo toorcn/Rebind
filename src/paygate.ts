@@ -3,6 +3,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import express, { type Express, type Request, type Response } from "express";
 import { openState, sealState, type DurableState, type WorldPrompt } from "./durable-state";
+import { mountChainDesk } from "./chain";
 import { mountJobDesk } from "./jobs";
 import { JobPool } from "./pool";
 import { RebindDesk, type RebindRequest } from "./rebind";
@@ -922,6 +923,7 @@ export function createApp(registry: AgentBookRegistry, options: AppOptions = {})
   });
 
   mountJobDesk(app, { pool, jobDevices, jobPrompts });
+  mountChainDesk(app);
 
   return app;
 }
