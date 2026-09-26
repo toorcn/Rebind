@@ -2,8 +2,11 @@ import type { ChainStatus } from "./chain";
 import type { WorldPrompt } from "./durable-state";
 import { focusJob, type Job, type Ledger, type Seat, type SettleReason } from "./pool";
 import { walletHomeEmbed } from "./wallet-page";
+import { walkthroughEmbed } from "./demo-walkthrough";
+import { spatialView } from "./spatial-view";
 
 export interface JobPageInput {
+  view?: "wallet" | "credits";
   jobs: Job[];
   ledger: Ledger;
   prompts: Map<string, WorldPrompt>;
@@ -108,21 +111,21 @@ function notice(tone: "wait" | "bad", title: string, body: string): string {
 function flashHtml(flash: string): string {
   switch (flash) {
     case "waiting":
-      return notice("wait", "Still waiting", "World App has not approved this code yet. Approve it there, then check again.");
+      return notice("wait", "Still waiting", "Approve the code in World App, then check again.");
     case "not-approved":
-      return notice("bad", "Not approved", "World App refused that code. Start a new one.");
+      return notice("bad", "Not approved", "Start a new code to try again.");
     case "world-down":
       return notice(
         "wait",
-        "World App is off on this server",
-        "Sandbox credentials are not set here. The recorded take further down still runs the same payout rule."
+        "Verification unavailable",
+        "World ID verification is unavailable. Open “Explore payment checks” below to try a simulation."
       );
     case "world-error":
-      return notice("bad", "World App did not start", "The code request failed. Try again in a moment.");
+      return notice("bad", "Couldn’t start verification", "Try again in a moment.");
     case "bad":
-      return notice("bad", "Check the job", "It needs a title, a short brief, a reward from 1 to 500, and a name for each agent.");
+      return notice("bad", "Check the job", "Add a title, brief, agent names, and a reward of 1–500 credits.");
     case "missing":
-      return notice("bad", "That job is gone", "Post it again. The pool only keeps the latest dozen.");
+      return notice("bad", "Job not found", "This job is no longer available. Create a new job.");
     default:
       return "";
   }
@@ -132,8 +135,8 @@ function claimReceipt(job: Job): string {
   if (!job.claimIgnored || job.decision.released) return "";
   return notice(
     "bad",
-    "Claim ignored",
-    "The request said the humans were different and sent two subject ids. The pool did not read those fields."
+    "Verification required",
+    "Only verified World IDs can unlock payment."
   );
 }
 
@@ -142,7 +145,7 @@ function seatCard(job: Job, seat: Seat, active: boolean): string {
   const name = seat === "buyer" ? job.buyerName : job.workerName;
   const status = proof
     ? `<p class="seat-status ok">${ICON_CHECK}<span>World ID verified</span></p><code class="seat-sub" title="${escapeHtml(proof.subject)}">${escapeHtml(shortSubject(proof.subject))}</code>`
-    : `<p class="seat-status">${active ? '<i class="pulse"></i>' : '<i class="dot"></i>'}<span>Waiting for World App</span></p><code class="seat-sub empty">sub · — — —</code>`;
+    : `<p class="seat-status">${active ? '<i class="pulse"></i>' : '<i class="dot"></i>'}<span>Not verified</span></p>`;
   return `<article class="seat${proof ? " verified" : ""}${active ? " active" : ""}">
       <p class="seat-role">${seatLabel(seat)}</p>
       <h3>${escapeHtml(name)}</h3>
@@ -178,9 +181,9 @@ function worldPanel(job: Job, seat: Seat, prompts: Map<string, WorldPrompt>): st
       <input type="hidden" name="role" value="${who}" />
       <button class="btn primary lg" type="submit">
         <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="10" r="2.6" fill="currentColor"/></svg>
-        Get the ${who}'s World code
+        Verify ${who}
       </button>
-      <p class="hint">A one-time code is issued by sandbox.auth.world.org for the ${who} seat.</p>
+      <p class="hint">Continue in World App.</p>
     </form>`;
   }
   const open = prompt.verificationUriComplete || prompt.verificationUri;
@@ -190,12 +193,16 @@ function worldPanel(job: Job, seat: Seat, prompts: Map<string, WorldPrompt>): st
         <button class="copy" type="button" data-copy="${escapeHtml(prompt.userCode)}">Copy</button>
       </div>
       <p class="code" aria-label="${escapeHtml(prompt.userCode)}">${codeCells(prompt.userCode)}</p>
-      <p class="hint">Approve this code in the sandbox World App as the ${who}.</p>
+      <p class="hint">Approve this code in World App as the ${who}.</p>
       <div class="actions">
         <a class="btn primary" href="${escapeHtml(open)}" target="_blank" rel="noopener">Open World App <span aria-hidden="true">↗</span></a>
         <form method="post" action="/jobs/${escapeHtml(job.id)}/world/pull">
           <input type="hidden" name="role" value="${who}" />
-          <button class="btn ghost" type="submit">I approved it. Check now.</button>
+          <button class="btn ghost" type="submit">Check approval</button>
+        </form>
+        <form method="post" action="/jobs/${escapeHtml(job.id)}/world/start">
+          <input type="hidden" name="role" value="${who}" />
+          <button class="btn ghost" type="submit">Start a new code</button>
         </form>
       </div>
       <p class="poll" data-poll data-job="${escapeHtml(job.id)}" data-role="${who}" aria-live="polite"></p>
@@ -203,29 +210,29 @@ function worldPanel(job: Job, seat: Seat, prompts: Map<string, WorldPrompt>): st
 }
 
 function claimForm(job: Job): string {
-  return `<div class="tamper">
+  return `<details class="diagnostics"><summary>Test verification</summary><div class="tamper">
       <div>
         <p class="label">Stress test</p>
-        <p>Send a client claim that says the humans are different, with two made-up subject ids.</p>
+        <p>Unverified identities cannot release payment.</p>
       </div>
       <form method="post" action="/jobs/${escapeHtml(job.id)}/claim">
         <input type="hidden" name="differentHumans" value="true" />
         <input type="hidden" name="buyerSubject" value="client-buyer" />
         <input type="hidden" name="workerSubject" value="client-worker" />
-        <button class="btn ghost sm" type="submit">Say the humans are different</button>
+        <button class="btn ghost sm" type="submit">Send test claim</button>
       </form>
-    </div>`;
+    </div></details>`;
 }
 
 function postForm(): string {
   return `<form class="post" method="post" action="/jobs">
     <label class="field">
-      <span>Job</span>
-      <input name="title" required maxlength="80" value="Summarize the Tokyo briefing" autocomplete="off" />
+      <span>Job title</span>
+      <input name="title" required maxlength="80" placeholder="e.g. Summarize the weekly briefing" autocomplete="off" />
     </label>
     <label class="field">
-      <span>What done looks like</span>
-      <input name="brief" required maxlength="280" value="Five bullets a judge can read in ten seconds." autocomplete="off" />
+      <span>Brief</span>
+      <input name="brief" required maxlength="280" placeholder="Describe the expected delivery" autocomplete="off" />
     </label>
     <div class="field">
       <label for="reward">Reward</label>
@@ -245,8 +252,8 @@ function postForm(): string {
       <label class="field"><span>Worker agent</span><input name="workerName" required maxlength="40" value="Worker agent" autocomplete="off" /></label>
     </div>
     <div class="submit-row">
-      <button class="btn primary lg" type="submit">Escrow the reward <span aria-hidden="true">→</span></button>
-      <p class="hint">Credits move into the pool. They are not revenue yet.</p>
+      <button class="btn primary lg" type="submit">Create job <span aria-hidden="true">→</span></button>
+      <p class="hint">Sandbox credits only. Payment releases after delivery and verification.</p>
     </div>
   </form>`;
 }
@@ -254,21 +261,21 @@ function postForm(): string {
 function panel(moment: Moment, prompts: Map<string, WorldPrompt>): string {
   switch (moment.kind) {
     case "post":
-      return `${head("Step 1 of 4", "Escrow a reward", "Name the job. The credits move into the pool. They are not revenue yet.")}
+      return `${head("Step 1 of 4", "Create a job", "Describe the work, choose a credit reward, and name both agents.")}
         ${postForm()}`;
     case "deliver":
-      return `${head("Step 2 of 4", "The worker finishes", `${moment.job.reward} credits are locked for “${moment.job.title}”. Finish the work. The pool still has not paid.`)}
+      return `${head("Step 2 of 4", "Submit delivery", `${moment.job.reward} credits in escrow.`)}
         <form class="post" method="post" action="/jobs/${escapeHtml(moment.job.id)}/deliver">
-          <label class="field"><span>Delivery</span><input name="note" required maxlength="280" value="Five bullets, ready for the judge." autocomplete="off" /></label>
+          <label class="field"><span>Delivery</span><input name="note" required maxlength="280" placeholder="Add the completed work or a link" autocomplete="off" /></label>
           <div class="submit-row">
-            <button class="btn primary lg" type="submit">Mark the work delivered <span aria-hidden="true">→</span></button>
+            <button class="btn primary lg" type="submit">Submit delivery <span aria-hidden="true">→</span></button>
           </div>
         </form>`;
     case "humans":
       return `${head(
         "Step 3 of 4",
-        "Two different humans",
-        `“${moment.job.title}” is delivered. ${moment.job.reward} credits are still in escrow. Each side approves in World App. This server keeps the subject ids.`
+        "Verify both people",
+        "Verify the buyer first, then the worker. Each must be a different person with World App."
       )}
         ${seatsHtml(moment.job, moment.seat)}
         ${worldPanel(moment.job, moment.seat, prompts)}
@@ -276,19 +283,19 @@ function panel(moment: Moment, prompts: Map<string, WorldPrompt>): string {
     case "refused":
       return `${head(
         "Step 4 of 4",
-        "Same human. The sale does not count.",
-        `Both agents finished “${moment.job.title}”. The subject ids match, so ${moment.job.reward} credits stay in escrow.`,
+        "Payment blocked",
+        `Both agents belong to the same person. ${moment.job.reward} credits remain in escrow.`,
         "bad"
       )}
-        <p class="verdict bad" aria-hidden="true">Refused</p>
+
         ${seatsHtml(moment.job, "buyer")}
-        <p class="hint">A second person approves a new code as the buyer. The same delivery can then be paid.</p>
+        <p class="hint">A different person must verify as the buyer to release payment.</p>
         ${worldPanel(moment.job, "buyer", prompts)}`;
     case "not-world":
       return `${head(
         "Step 3 of 4",
-        "Those ids were not issued by World App",
-        "The pool only releases a reward after both tokens check out at sandbox.auth.world.org.",
+        "Verify with World ID",
+        "Both people need a valid World ID to release payment.",
         "bad"
       )}
         ${seatsHtml(moment.job, "buyer")}
@@ -296,16 +303,16 @@ function panel(moment: Moment, prompts: Map<string, WorldPrompt>): string {
     case "paid":
       return `${head(
         "Paid",
-        `${moment.job.reward} credits left escrow`,
-        `The buyer and the worker have different World IDs. “${moment.job.title}” counts as revenue.`,
+        `${moment.job.reward} credits paid`,
+        `Payment released for “${moment.job.title}”.`,
         "ok"
       )}
-        <p class="verdict ok" aria-hidden="true">Released</p>
+
         ${seatsHtml(moment.job, null)}
-        <div class="again">
-          <p class="label">Post another job when you want a new escrow.</p>
+        <details class="again">
+          <summary>Create another job</summary>
           ${postForm()}
-        </div>`;
+        </details>`;
     default: {
       const leftover: never = moment;
       return leftover;
@@ -354,8 +361,8 @@ function history(jobs: Job[], focusId: string | null): string {
     .join("");
   return `<section class="section reveal" style="--d:5" aria-labelledby="jobs-h">
       <div class="section-head">
-        <h2 id="jobs-h">Jobs</h2>
-        <p>${jobs.length} of 12 kept · newest first</p>
+        <h2 id="jobs-h">Sandbox job history</h2>
+        <p>${jobs.length} recent</p>
       </div>
       <ul class="history">${rows}</ul>
     </section>`;
@@ -368,11 +375,11 @@ function reasonWord(reason: SettleReason): string {
     case "awaiting-both":
     case "awaiting-buyer":
     case "awaiting-worker":
-      return "delivered, unpaid";
+      return "Awaiting verification";
     case "same-human":
-      return "same human, unpaid";
+      return "Payment blocked";
     case "not-world":
-      return "not a World proof";
+      return "Verification needed";
     case "released":
       return "paid";
     default: {
@@ -384,7 +391,7 @@ function reasonWord(reason: SettleReason): string {
 
 function focusCard(job: Job | null): string {
   if (!job) {
-    return `<div class="focus empty"><p class="label">Current job</p><p>No job in the pool yet. Post one to lock a reward in escrow.</p></div>`;
+    return `<div class="focus empty"><p class="label">Current job</p><p>Create a job to begin. Then submit the work and verify both people to release the reward.</p></div>`;
   }
   return `<div class="focus">
       <div class="focus-top"><p class="label">Current job</p><code>${escapeHtml(job.id)}</code></div>
@@ -410,14 +417,15 @@ function ledgerBar(ledger: Ledger): string {
 }
 
 export function renderJobPage(input: JobPageInput): string {
+  const isDemo = input.view === "credits";
   const focus = focusJob(input.jobs);
   const moment = momentOf(focus);
   const rail = railFor(moment);
   const steps: [string, string][] = [
-    ["Post", "Escrow the reward"],
-    ["Deliver", "The worker finishes"],
-    ["Two humans", "A World ID for each seat"],
-    ["Pay", "Release on distinct IDs"],
+    ["Create", "Set the reward"],
+    ["Deliver", "Submit the work"],
+    ["Verify", "Both people verify"],
+    ["Pay", "Release the reward"],
   ];
   const railHtml = steps
     .map(([label, sub], index) => {
@@ -431,6 +439,7 @@ export function renderJobPage(input: JobPageInput): string {
     .join("");
   const claim = focus ? claimReceipt(focus) : "";
   const wallet = walletHomeEmbed(input.chain);
+  const walkthrough = walkthroughEmbed();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -438,8 +447,11 @@ export function renderJobPage(input: JobPageInput): string {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#f5f6fd" />
-  <title>Rebind — the pool pays two humans</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='12' cy='16' r='10' fill='none' stroke='%23ea6b43' stroke-width='2'/%3E%3Ccircle cx='21' cy='16' r='10' fill='none' stroke='%235869eb' stroke-width='2'/%3E%3C/svg%3E" />
+  <title>${isDemo ? "Rebind — Guided demo" : "Rebind — Wallet jobs"}</title>
+  <meta name="description" content="${isDemo ? "Explore the payment rule using demo credits. No wallet transactions." : "Fund a job with MetaMask, verify both people with World ID, and settle on-chain."}" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="/vendor/spatial.css" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" />
   <style>
@@ -455,8 +467,8 @@ export function renderJobPage(input: JobPageInput): string {
       --line-2: rgba(28, 41, 82, 0.15);
       --text: #111a3d;
       --text-2: #394369;
-      --muted: #5f6890;
-      --faint: #8f97b8;
+      --muted: #535c84;
+      --faint: #6f7799;
       --navy: #1c2952;
       --navy-2: #294481;
       --accent: #5869eb;
@@ -482,10 +494,22 @@ export function renderJobPage(input: JobPageInput): string {
       --shadow-lg: 0 1px 2px rgba(17, 26, 61, 0.04), 0 30px 60px -28px rgba(28, 41, 82, 0.28);
     }
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    summary { cursor: pointer; font-weight: 500; }
+    summary:hover { color: var(--accent); }
+    .demos > summary { padding: 16px 0; }
+    .diagnostics { margin-top: 24px; color: var(--muted); font-size: 13px; }
+    .diagnostics .tamper { margin-top: 12px; }
+    #desk, #wallet-desk { scroll-margin-top: 100px; }
+    .skip { position: absolute; top: -80px; left: 20px; max-width: calc(100% - 40px); z-index: 30; }
+    .skip:focus { top: 12px; }
+    .btn.skip { position: absolute; }
+    .btn:disabled, .wallet-connect:disabled { cursor: wait; opacity: 0.6; }
+    .nav nav a[aria-current] { color: var(--text); background: var(--surface-3); }
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      min-height: 100vh;
+      min-height: 100dvh;
       font: 15px/1.55 var(--sans);
       background: var(--bg);
       color: var(--text);
@@ -579,7 +603,7 @@ export function renderJobPage(input: JobPageInput): string {
       grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.9fr);
       gap: 56px;
       align-items: end;
-      padding: 76px 0 56px;
+      padding: 48px 0 36px;
     }
     .eyebrow {
       margin: 0 0 22px;
@@ -602,8 +626,7 @@ export function renderJobPage(input: JobPageInput): string {
       color: var(--navy);
     }
     h1 em {
-      font-style: italic;
-      padding-right: 0.06em;
+      font-style: normal;
       background: linear-gradient(95deg, var(--coral) 10%, #f08f2e 55%, #e9a800 95%);
       -webkit-background-clip: text;
       background-clip: text;
@@ -691,7 +714,7 @@ export function renderJobPage(input: JobPageInput): string {
     .btn.ghost:hover { border-color: rgba(88, 105, 235, 0.45); color: var(--navy); }
     .btn.lg { padding: 14px 20px; font-size: 15px; }
     .btn.sm { padding: 9px 13px; font-size: 13px; border-radius: 10px; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
     .btn[aria-busy="true"] { color: transparent !important; pointer-events: none; }
     .btn[aria-busy="true"]::after {
       content: "";
@@ -708,26 +731,16 @@ export function renderJobPage(input: JobPageInput): string {
     /* desk */
     .desk {
       display: grid;
-      grid-template-columns: 280px minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) 320px;
       gap: 28px;
       padding: 8px 0 0;
       scroll-margin-top: 80px;
     }
-    .desk-side { position: sticky; top: 84px; align-self: start; display: grid; gap: 18px; }
-    .steps { list-style: none; margin: 0; padding: 0; position: relative; }
-    .steps li { position: relative; display: flex; gap: 14px; padding: 0 0 22px; color: var(--faint); }
+    .desk-side > :only-child { grid-column: 1 / -1; }
+    .desk-side { align-self: start; display: grid; gap: 18px; }
+    .steps { list-style: none; margin: 0 0 24px; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .steps li { position: relative; display: flex; gap: 14px; padding: 0; color: var(--faint); }
     .steps li:last-child { padding-bottom: 0; }
-    .steps li::before {
-      content: "";
-      position: absolute;
-      left: 15px;
-      top: 34px;
-      bottom: 4px;
-      width: 1px;
-      background: var(--line-2);
-    }
-    .steps li:last-child::before { display: none; }
-    .steps li.done::before { background: linear-gradient(var(--ok-bright), rgba(34, 179, 122, 0.25)); }
     .num {
       flex: none;
       display: grid;
@@ -757,7 +770,7 @@ export function renderJobPage(input: JobPageInput): string {
     .focus-top code { color: var(--faint); font-size: 11.5px; }
     .focus h3 { margin: 10px 0 0; font: 400 1.35rem/1.15 var(--serif); letter-spacing: -0.01em; color: var(--navy); }
     .focus > p { margin: 6px 0 0; color: var(--muted); font-size: 13.5px; }
-    .focus dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0 0; }
+    .focus dl { display: grid; grid-template-columns: auto 1fr; gap: 8px; margin: 14px 0 0; }
     .focus dl div { background: var(--surface-3); border-radius: 10px; padding: 8px 10px; }
     .focus dt { font: 10.5px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
     .focus dd { margin: 4px 0 0; font-size: 13px; font-weight: 500; }
@@ -820,7 +833,7 @@ export function renderJobPage(input: JobPageInput): string {
     .post { display: grid; gap: 16px; margin-top: 28px; }
     .field { display: grid; gap: 7px; }
     .field > span, .field > label { font-size: 13px; color: var(--text-2); font-weight: 500; }
-    input {
+    input, textarea {
       width: 100%;
       font: 15px/1.3 var(--sans);
       color: var(--text);
@@ -830,8 +843,10 @@ export function renderJobPage(input: JobPageInput): string {
       padding: 13px 14px;
       transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
     }
-    input:hover { border-color: rgba(28, 41, 82, 0.26); }
-    input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); background: var(--surface); }
+    textarea { min-height: 88px; resize: vertical; line-height: 1.5; }
+    input::placeholder, textarea::placeholder { color: var(--faint); }
+    input:hover, textarea:hover { border-color: rgba(28, 41, 82, 0.26); }
+    textarea:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); background: var(--surface); }
     input:user-invalid { border-color: var(--bad); box-shadow: 0 0 0 4px var(--bad-soft); }
     .reward { position: relative; }
     .reward input { font-family: var(--mono); font-size: 17px; padding-right: 84px; -moz-appearance: textfield; }
@@ -1032,6 +1047,7 @@ export function renderJobPage(input: JobPageInput): string {
     .take h3 { margin: 16px 0 0; font: 400 1.7rem/1.1 var(--serif); letter-spacing: -0.01em; color: var(--navy); }
     .take > p { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
     .take > p code { color: var(--navy-2); background: var(--surface-3); padding: 1px 5px; border-radius: 5px; }
+    .take > p:last-of-type { flex: 1 0 auto; }
     .take .btn { margin-top: 20px; align-self: flex-start; }
     .beats { list-style: none; margin: 0; padding: 0; }
     .beats:not(:empty) { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
@@ -1084,6 +1100,92 @@ export function renderJobPage(input: JobPageInput): string {
       html { scroll-behavior: auto; }
     }
 
+    .hero { align-items: center; }
+    .hero-cta { align-items: center; gap: 20px; }
+    .text-link { font-size: 14px; font-weight: 500; }
+    .journey { padding: 4px 0 4px 28px; border-left: 1px solid var(--line-2); }
+    .journey ol { list-style: none; padding: 0; margin: 24px 0 0; display: grid; gap: 22px; }
+    .journey li { display: flex; gap: 16px; }
+    .journey li > span { font: 12px/1.8 var(--mono); color: var(--accent); }
+    .journey strong { font-weight: 500; }
+    .journey p:not(.label) { margin: 4px 0 0; font-size: 14px; color: var(--muted); max-width: 34ch; }
+    .workspace { padding-top: 32px; border-top: 1px solid var(--line-2); }
+    .workspace-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 28px; }
+    .workspace-heading h2 { margin: 10px 0 8px; font: 400 2.2rem/1.1 var(--serif); }
+    .workspace-heading p:not(.label) { color: var(--muted); max-width: 62ch; margin: 0; font-size: 14px; }
+    .workspace-heading > a { flex-shrink: 0; }
+    .ledger-card { box-shadow: var(--shadow); padding: 20px; }
+    .ledger-card .big strong { font-size: 3rem; }
+    .ledger-card .rows li { font-size: 13px; }
+    .ledger-card .hint { font-size: 12px; margin-bottom: 0; }
+    #wallet-desk { margin-top: 56px; padding-top: 32px; border-top: 1px solid var(--line-2); }
+    .demos { padding-top: 16px; border-top: 1px solid var(--line-2); }
+    @media (max-width: 680px) {
+      .workspace-heading { align-items: start; flex-direction: column; gap: 16px; }
+      .journey { padding-left: 18px; }
+      .hero-cta .text-link { text-align: center; width: 100%; }
+      .nav-end .tag { font-size: 10px; }
+    }
+
+    .demo-page { --bg: #faf8f1; --surface-2: #fffdf7; --surface-3: #f2eddf; --accent: #856218; --accent-soft: #f2ead4; }
+    .demo-page::before, .demo-page::after { display: none; }
+    .demo-page .nav { background: rgba(250, 248, 241, 0.96); }
+    .demo-page h1 em { background: none; color: var(--accent); }
+    .demo-banner { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; padding: 18px 20px; margin-top: 28px; background: var(--surface-3); border-left: 3px solid var(--accent); font-size: 14px; }
+    .demo-banner span { flex: 1; min-width: 220px; color: var(--text-2); }
+    .demo-banner a { font-weight: 500; }
+    .demo-hero { grid-template-columns: 1fr; padding-bottom: 36px; }
+    .demo-hero h1 { font-size: clamp(2.6rem, 5vw, 4rem); }
+    .wallet-page #wallet-desk { margin-top: 0; }
+    .demo-page .takes { grid-template-columns: 1fr; }
+    .demo-panel { view-transition-name: none; }
+    mark {
+      color: var(--navy);
+      font-weight: 500;
+      background: linear-gradient(transparent 58%, rgba(246, 180, 14, 0.38) 58%, rgba(246, 180, 14, 0.38) 92%, transparent 92%);
+      padding: 0 2px;
+    }
+    .needs { margin-top: 26px; }
+    .needs ul { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; padding: 0; }
+    .needs li {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 13px 7px 7px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      box-shadow: 0 1px 2px rgba(17, 26, 61, 0.05);
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .need-icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+    .needs li:nth-child(2) .need-icon { background: rgba(234, 107, 67, 0.12); color: var(--coral); }
+    .needs li:nth-child(3) .need-icon { background: var(--sun-soft); color: var(--sun-ink); }
+    .need-icon svg { width: 15px; height: 15px; }
+    .demo-entry {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      max-width: 34rem;
+      margin-top: 22px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px dashed rgba(88, 105, 235, 0.35);
+      border-radius: 16px;
+      color: var(--text);
+      transition: border-color 0.2s, background 0.2s, transform 0.2s var(--ease);
+    }
+    .demo-entry:hover { color: var(--text); background: var(--surface); border-color: var(--accent); border-style: solid; }
+    .demo-entry:hover .demo-entry-go { transform: translateX(3px); }
+    .demo-entry strong { display: block; font-size: 14.5px; font-weight: 600; color: var(--navy); }
+    .demo-entry small { display: block; margin-top: 2px; font-size: 13px; color: var(--muted); }
+    .demo-entry-icon { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 11px; }
+    .demo-entry-go { margin-left: auto; color: var(--accent); font-size: 18px; transition: transform 0.2s var(--ease); }
+    .advanced-demo > summary { padding: 0 0 24px; color: var(--text-2); }
+    .advanced-demo > summary small { display: block; margin-top: 6px; color: var(--muted); font-weight: 400; }
+
     @media (max-width: 960px) {
       .hero { grid-template-columns: 1fr; gap: 36px; padding: 48px 0 40px; align-items: start; }
       .desk { grid-template-columns: 1fr; }
@@ -1093,8 +1195,12 @@ export function renderJobPage(input: JobPageInput): string {
     @media (max-width: 680px) {
       .wrap { padding: 0 16px; }
       .nav .wrap { gap: 12px; }
-      .nav nav { display: none; }
-      .wallet-connect { padding: 8px 12px; }
+      .nav .wrap { flex-wrap: wrap; height: auto; padding-top: 12px; padding-bottom: 10px; }
+      .nav nav { order: 3; width: 100%; justify-content: space-between; }
+      .nav nav a { padding: 6px 4px; font-size: 12px; }
+      .wallet-connect { padding: 8px 11px; font-size: 12px; }
+      .nav-end { gap: 6px; }
+      .net { display: none; }
       .desk-side { grid-template-columns: 1fr; }
       .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
       .steps li { flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 0; }
@@ -1120,103 +1226,140 @@ export function renderJobPage(input: JobPageInput): string {
       .take .btn { align-self: stretch; }
       .net span { max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
     }
+    @media (max-width: 370px) {
+      .brand span { display: none; }
+    }
   </style>
 </head>
-<body>
+<body class="${isDemo ? "demo-page" : "wallet-page"}">
+  <a class="skip btn primary" href="${isDemo ? "#in-app-demo" : "#wallet-desk"}">Skip to ${isDemo ? "demo" : "wallet jobs"}</a>
   <header class="nav">
     <div class="wrap">
       <a class="brand" href="/" aria-label="Rebind home">
         <svg viewBox="0 0 26 18" aria-hidden="true"><circle cx="9" cy="9" r="7.5" fill="none" stroke="#ea6b43" stroke-width="1.8"/><circle cx="17" cy="9" r="7.5" fill="none" stroke="#5869eb" stroke-width="1.8"/></svg>
-        Rebind
+        <span>Rebind</span>
       </a>
       <nav aria-label="Primary">
-        <a href="/flow">Flow</a>
-        <a href="/film">Film</a>
-        <a href="/desk">Desk</a>
+        <a href="/" ${isDemo ? "" : 'aria-current="page"'}>Wallet jobs</a>
+        <a href="/credits" ${isDemo ? 'aria-current="page"' : ""}>Guided demo</a>
+        <a href="/flow">How it works</a>
       </nav>
       <div class="nav-end">
-        <button class="wallet-connect" id="connect" type="button">Scan with MetaMask</button>
-        <button class="wallet-connect ghost" id="connect-browser" type="button">Browser wallet</button>
-        <span class="net" id="net" data-state="idle"><i></i><span>Checking chain…</span></span>
+<span class="tag">${isDemo ? "Demo · No transactions" : "Test network · Test tokens"}</span>
       </div>
     </div>
   </header>
 
   <main class="wrap">
+    ${isDemo ? `
+    <div class="demo-banner"><strong>Demo only</strong><span>App credits only. These jobs do not move tokens or change your wallet balance.</span><a href="/">Back to wallet jobs →</a></div>
+    <section class="hero demo-hero">
+      <div>
+        <p class="eyebrow">Learn the payment rule</p>
+        <h1>Follow a job.<br /><em>See how payment works.</em></h1>
+        <p class="deck">Fund a sample job, submit the work, and see why payment needs two different people. The guided demo uses sample identities and credits—no wallet or World App needed.</p>
+        <div class="hero-cta"><a class="btn primary" href="#in-app-demo">Start the guided demo ↓</a>${focus ? '<a class="text-link" href="#desk">Continue your credit sandbox job ↓</a>' : ""}</div>
+      </div>
+    </section>
+` : `
     <section class="hero">
       <div>
-        <p class="eyebrow reveal" style="--d:0">Job pool · World ID · ERC-8183</p>
-        <h1 class="reveal" style="--d:1">The pool pays <em>two different</em> humans.</h1>
-        <p class="deck reveal" style="--d:2">One person can run the buyer and the worker and finish the job. The credits stay in escrow, and that sale does not count. A second person proves the buyer, and the same delivery gets paid. Connect a wallet and this page can fund the same job on World Chain Sepolia.</p>
+        <p class="eyebrow reveal" style="--d:0">Job payments · ${escapeHtml(input.chain.network || "World Chain Sepolia")}</p>
+        <h1 class="reveal" style="--d:1">Work delivered.<br /><em>People verified.</em></h1>
+        <p class="deck reveal" style="--d:2">Fund a job, get the work delivered, and release payment only when the buyer and worker verify as <mark>two different people</mark>.</p>
         <div class="hero-cta reveal" style="--d:3">
-          <a class="btn primary lg" href="#desk">${focus ? "Continue the job" : "Post a job"} <span aria-hidden="true">↓</span></a>
-          <a class="btn ghost lg" href="/flow">Watch the flow</a>
+          <a class="btn primary lg" href="#wallet-desk">Create a wallet job <span aria-hidden="true">↓</span></a>
         </div>
+        <div class="needs reveal" style="--d:4">
+          <p class="label">Each person needs</p>
+          <ul>
+            <li><span class="need-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><rect x="3" y="5" width="14" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M13 10.5h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5 5l7-2.5 1 2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>A MetaMask wallet</li>
+            <li><span class="need-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="10" r="2.5" fill="currentColor"/></svg></span>World App</li>
+            <li><span class="need-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 2.5 15 10l-5 3-5-3 5-7.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 11.5 10 17.5l5-6-5 3-5-3Z" fill="currentColor"/></svg></span>Test ETH for gas</li>
+          </ul>
+        </div>
+        <a class="demo-entry reveal" style="--d:5" href="/credits">
+          <span class="demo-entry-icon" aria-hidden="true">▶</span>
+          <span><strong>Just exploring? Try the guided demo</strong><small>Sample people and credits. No wallet or World App needed.</small></span>
+          <span class="demo-entry-go" aria-hidden="true">→</span>
+        </a>
       </div>
-      <aside class="ledger-card reveal" style="--d:2" aria-label="Pool balances">
-        <div class="ledger-top"><p class="label">Pool ledger</p><span class="live"><i></i>credits</span></div>
+      ${spatialView({ id: "people-explainer", mode: "people" })}
+    </section>
+
+`}
+
+    ${isDemo ? `
+    ${walkthrough.section}
+
+    <details class="workspace advanced-demo" id="desk" ${focus || input.flash ? "open" : ""}>
+      <summary>Advanced: test World ID with demo credits<small>Uses World App to verify real people. No wallet or blockchain transactions.</small></summary>
+    <section aria-labelledby="sandbox-heading">
+      <div class="workspace-heading">
+        <div><p class="label">Demo credits · World App verification</p><h2 id="sandbox-heading">Credit sandbox</h2>
+        <p>Walk through a job with demo credits. You’ll need two different people with World App to complete verification.</p></div>
+        <a class="text-link" href="/">Go to wallet jobs →</a>
+      </div>
+      <ol class="steps" aria-label="Sandbox job progress">${railHtml}</ol>
+      <div class="desk">
+        <section class="panel" aria-label="Next action">
+          ${flashHtml(input.flash)}
+          ${claim}
+          ${panel(moment, input.prompts)}
+        </section>
+        <div class="desk-side">
+          ${focus ? spatialView({ id: "credit-payment", mode: "credits", job: focus }) : ""}
+          ${focus ? focusCard(focus) : ""}
+      <aside class="ledger-card" aria-label="Sandbox pool totals">
+        <div class="ledger-top"><p class="label">Sandbox pool totals</p><span class="tag">credits</span></div>
         <div class="big"><strong data-count="paid" data-value="${input.ledger.paid}">${input.ledger.paid}</strong><span>paid out</span></div>
-        <p class="sub">The only revenue that counts</p>
+
         ${ledgerBar(input.ledger)}
         <ul class="rows">
-          <li class="held"><i></i><span>In escrow</span><small>Held until two humans differ</small><b data-count="escrow" data-value="${input.ledger.escrow}">${input.ledger.escrow}</b></li>
-          <li class="paid"><i></i><span>Paid out</span><small>Distinct World IDs</small><b data-count="paid2" data-value="${input.ledger.paid}">${input.ledger.paid}</b></li>
-          <li class="refused"><i></i><span>Refused</span><small>Same human. Still in escrow.</small><b data-count="refused" data-value="${input.ledger.refused}">${input.ledger.refused}</b></li>
+          <li class="held"><i></i><span>In escrow</span><b data-count="escrow" data-value="${input.ledger.escrow}">${input.ledger.escrow}</b></li>
+          <li class="paid"><i></i><span>Paid out</span><b data-count="paid2" data-value="${input.ledger.paid}">${input.ledger.paid}</b></li>
+          <li class="refused"><i></i><span>Blocked in escrow</span><b data-count="refused" data-value="${input.ledger.refused}">${input.ledger.refused}</b></li>
         </ul>
+        <p class="hint">Across all sandbox jobs. Separate from your wallet balance.</p>
       </aside>
-    </section>
-
-    ${wallet.section}
-
-    <section class="desk reveal" style="--d:4" id="desk" aria-label="Job desk">
-      <aside class="desk-side">
-        <ol class="steps" aria-label="Progress">${railHtml}</ol>
-        ${focusCard(focus)}
-      </aside>
-      <section class="panel" aria-label="Next action">
-        ${flashHtml(input.flash)}
-        ${claim}
-        ${panel(moment, input.prompts)}
-      </section>
-    </section>
-
-    ${history(input.jobs, focus?.id ?? null)}
-
-    <section class="section reveal" style="--d:6" aria-labelledby="proof-h">
-      <div class="section-head">
-        <h2 id="proof-h">No second phone in the room?</h2>
-        <p>Same payout rule, run for you</p>
+        </div>
       </div>
+      ${history(input.jobs, focus?.id ?? null)}
+    </section>
+    </details>
+
+    <details class="section demos reveal" style="--d:6">
+      <summary>Explore payment checks</summary>
+      <p class="hint">No second person available? Use test identities to see blocked payments and successful payouts.</p>
       <div class="takes">
         <article class="take" id="take">
-          <div class="take-top"><p class="label">Recorded take</p><span class="tag">server · fixtures</span></div>
-          <h3>Replay the payout rule</h3>
-          <p>The server runs the payout rule on fixture subjects. This does not move the credits above. A fixture is not a World App approval.</p>
-          <button class="btn ghost" id="play-take" type="button">Play the recorded take</button>
+          <div class="take-top"><p class="label">Simulation</p><span class="tag">Test data</span></div>
+          <h3>Preview payment checks</h3>
+          <p>Uses test identities. Your balance is unchanged.</p>
+          <button class="btn ghost" id="play-take" type="button">Run simulation</button>
           <ol class="beats" id="take-stage"></ol>
         </article>
-        <article class="take" id="chain-take">
-          <div class="take-top"><p class="label">On-chain take</p><span class="tag" id="chain-tag">checking…</span></div>
-          <h3>Settle it where money lives</h3>
-          <p>An ERC-8183 hook reads both World subjects and reverts <code>complete()</code> when they match. The escrow locks on-chain, the sale never counts, and <code>claimRefund</code> returns the buyer's funds after expiry. Subjects here are fixtures written by the registrar key; a live registrar writes only after the server-side World check passes.</p>
-          <p class="hint" id="chain-status">Checking the chain…</p>
-          <button class="btn ghost" id="play-chain" type="button">Run the on-chain take</button>
-          <ol class="beats" id="chain-stage"></ol>
-        </article>
+
       </div>
-    </section>
+    </details>
+    ` : wallet.section}
   </main>
 
   <footer>
     <div class="wrap">
-      <span>Rebind · ETHGlobal Tokyo 2026</span>
-      <nav aria-label="Earlier cuts"><a href="/desk">Revoke a key</a><a href="/film">90-second film</a><a href="/flow">Watch the flow</a></nav>
+      <span>Rebind</span>
+      <nav aria-label="Resources">${isDemo ? '<a href="/">Back to wallet jobs</a>' : '<a href="/credits">Guided demo</a>'}<a href="/desk">Key management</a><a href="/film">Product demo</a></nav>
     </div>
   </footer>
 
-  <script>
+  ${isDemo ? `<script>
     (() => {
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      function revealCreditJob() {
+        if (location.hash === "#desk") document.getElementById("desk").open = true;
+      }
+      revealCreditJob();
+      window.addEventListener("hashchange", revealCreditJob);
       const CHECK = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10.5l3.2 3.2L15 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
       function store(key, value) {
@@ -1298,7 +1441,7 @@ export function renderJobPage(input: JobPageInput): string {
               button.textContent = "Copy";
               button.removeAttribute("data-done");
             }, 1600);
-          } catch (error) {}
+          } catch (error) { button.textContent = "Select code to copy"; }
         });
       });
 
@@ -1311,7 +1454,7 @@ export function renderJobPage(input: JobPageInput): string {
         const limit = 3 * 60 * 1000;
         let timer = 0;
         let busy = false;
-        let checks = 0;
+        let stopped = false;
         function say(text, live) {
           poll.textContent = text;
           if (live) poll.setAttribute("data-live", "");
@@ -1319,14 +1462,20 @@ export function renderJobPage(input: JobPageInput): string {
         }
         function schedule(delay) {
           clearTimeout(timer);
+          if (stopped) return;
           if (Date.now() - started > limit) {
             say("Auto-check paused. Use the button once you approve.", false);
             return;
           }
           timer = setTimeout(check, delay);
         }
+        function finish(url) {
+          stopped = true;
+          clearTimeout(timer);
+          location.replace(url);
+        }
         async function check() {
-          if (busy) return;
+          if (busy || stopped) return;
           busy = true;
           try {
             const response = await fetch("/jobs/" + encodeURIComponent(job) + "/world/pull", {
@@ -1335,20 +1484,24 @@ export function renderJobPage(input: JobPageInput): string {
               body: JSON.stringify({ role: role }),
             });
             const body = await response.json().catch(() => ({}));
-            checks += 1;
             if (response.status === 202) {
-              say("Waiting for approval in World App · checked " + checks + "×", true);
+              say("Waiting for approval in World App", true);
               schedule(5000);
             } else if (response.ok && body.attached) {
               say("Approved. Updating…", false);
-              location.replace("/#desk");
+              finish("/credits#desk");
             } else if (response.status === 403) {
-              location.replace("/?flash=not-approved#desk");
+              finish("/credits?flash=not-approved#desk");
+            } else if (response.status === 409 && body.status === "replaced") {
+              finish("/credits#desk");
+            } else if (response.status === 404) {
+              finish("/credits?flash=world-error#desk");
             } else {
-              location.replace("/?flash=world-error#desk");
+              say("Couldn’t check approval. Retrying…", true);
+              schedule(8000);
             }
           } catch (error) {
-            say("Connection hiccup. Retrying…", true);
+            say("Connection lost. Retrying…", true);
             schedule(8000);
           }
           busy = false;
@@ -1423,91 +1576,20 @@ export function renderJobPage(input: JobPageInput): string {
             item.appendChild(nums);
             stage.appendChild(item);
           });
-          verdict(stage, !!report.passed, report.passed ? "The take passed." : "The take failed.", beats.length);
-          play.textContent = "Play it again";
+          verdict(stage, !!report.passed, report.passed ? "Simulation complete." : "Simulation failed. Try again.", beats.length);
+          play.textContent = "Run again";
         } catch (error) {
           stage.replaceChildren();
-          verdict(stage, false, "The take could not run.", 0);
+          verdict(stage, false, "Couldn’t run the simulation. Try again.", 0);
         }
         play.disabled = false;
         play.removeAttribute("aria-busy");
       });
 
-      const net = document.getElementById("net");
-      const chainTag = document.getElementById("chain-tag");
-      const chainPlay = document.getElementById("play-chain");
-      const chainStage = document.getElementById("chain-stage");
-      const chainStatus = document.getElementById("chain-status");
-      fetch("/chain")
-        .then((res) => res.json())
-        .then((status) => {
-          if (status.configured) {
-            chainStatus.textContent = "Settling on " + status.network + " (chain " + status.chainId + ").";
-            net.dataset.state = "on";
-            net.lastElementChild.textContent = status.network;
-            chainTag.textContent = status.network;
-            chainTag.classList.add("on");
-          } else {
-            chainStatus.textContent = "No chain is configured on this server. Locally, npm run chain-self-pay boots anvil and runs the same take.";
-            chainPlay.disabled = true;
-            net.dataset.state = "off";
-            net.lastElementChild.textContent = "Off-chain";
-            chainTag.textContent = "not configured";
-          }
-        })
-        .catch(() => {
-          chainStatus.textContent = "Chain status did not load.";
-          net.dataset.state = "off";
-          net.lastElementChild.textContent = "Chain unknown";
-          chainTag.textContent = "unknown";
-        });
-
-      chainPlay.addEventListener("click", async () => {
-        chainPlay.disabled = true;
-        chainPlay.setAttribute("aria-busy", "true");
-        skeleton(chainStage, "Settling two jobs on-chain. This takes a moment…");
-        try {
-          const response = await fetch("/demo/chain-self-pay", { method: "POST" });
-          const report = await response.json();
-          chainStage.replaceChildren();
-          const beats = Array.isArray(report.beats) ? report.beats : [];
-          beats.forEach((beat, index) => {
-            const name = typeof beat.stamp === "string" ? beat.stamp : "";
-            const item = beatItem(beat, index, beatTone(name, ["DISTINCT_HUMANS", "REFUNDED"], ["SAME_HUMAN"]));
-            if (typeof beat.tx === "string") {
-              const nums = document.createElement("p");
-              nums.className = "nums";
-              if (typeof beat.link === "string") {
-                const anchor = document.createElement("a");
-                anchor.href = beat.link;
-                anchor.target = "_blank";
-                anchor.rel = "noopener";
-                anchor.textContent = "tx " + beat.tx.slice(0, 12) + "… ↗";
-                nums.appendChild(anchor);
-              } else {
-                nums.textContent = "tx " + beat.tx;
-              }
-              item.appendChild(nums);
-            }
-            chainStage.appendChild(item);
-          });
-          verdict(
-            chainStage,
-            !!report.passed,
-            report.passed ? "The on-chain take passed." : report.detail || "The on-chain take failed.",
-            beats.length
-          );
-          chainPlay.textContent = "Run it again";
-        } catch (error) {
-          chainStage.replaceChildren();
-          verdict(chainStage, false, "The on-chain take could not run.", 0);
-        }
-        chainPlay.disabled = false;
-        chainPlay.removeAttribute("aria-busy");
-      });
     })();
-  </script>
-  ${wallet.tail}
+  </script>` : ""}
+  ${isDemo ? walkthrough.tail : wallet.tail}
+  <script type="module" src="/vendor/spatial/main.js"></script>
 </body>
 </html>`;
 }

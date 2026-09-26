@@ -18,6 +18,7 @@ import {
 
 export interface ChainStatus {
   configured: boolean;
+  demoAvailable?: boolean;
   network: string;
   chainId: number;
   chainIdHex: string;
@@ -337,11 +338,21 @@ export function mountChainDesk(app: Express, hooks: ChainDeskHooks): void {
       return;
     }
     const result = await pullValidatedSubject(deviceCode);
+    if (hooks.devices.get(key) !== deviceCode) {
+      res.status(409).json({ attached: false, error: "code-replaced", detail: "A newer World ID code is available. Check the new code instead." });
+      return;
+    }
     if (result.kind === "pending") {
       res.status(202).json({ attached: false, status: "pending" });
       return;
     }
     if (result.kind === "denied") {
+      if (["token_failed", "server_error", "temporarily_unavailable"].includes(result.error)) {
+        res.status(502).json({ attached: false, error: "world-error", detail: "World ID is temporarily unavailable. Try checking this code again." });
+        return;
+      }
+      hooks.devices.delete(key);
+      hooks.prompts.delete(key);
       res.status(403).json({ attached: false, error: "not-approved", detail: result.error });
       return;
     }

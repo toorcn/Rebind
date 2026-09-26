@@ -122,10 +122,10 @@ async function assertHttp(base: string): Promise<void> {
 
   const home = await fetch(`${base}/`);
   const html = await home.text();
-  if (home.status !== 200 || !html.includes("The pool pays two different humans.")) {
+  if (home.status !== 200 || !html.includes('id="desk"')) {
     throw new Error("job desk did not render");
   }
-  if (!html.includes("Claim ignored")) {
+  if (!html.includes("Only verified World IDs can unlock payment.")) {
     throw new Error("desk hid the ignored claim");
   }
 

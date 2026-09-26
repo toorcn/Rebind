@@ -10,11 +10,23 @@ npm run self-pay
 npm run dev
 ```
 
-Open http://127.0.0.1:43210 . The home page is the settlement desk. **Scan with MetaMask** shows a QR code the phone app can scan. **Browser wallet** uses an extension in this window. Either path opens the World Chain Sepolia tools on the same page: mint DemoUSD, fund a job from that wallet, and have a second wallet deliver. Each wallet proves with World App, and the server writes that subject onto the address that signed. Settlement pays two humans and reverts when they are one person. The credit desk above that wallet section stays in place.
+Open http://127.0.0.1:43210 for **Wallet jobs**, the main MetaMask workflow. Connect with **Scan with MetaMask** or **Browser wallet**, then fund a job on World Chain Sepolia. Test tokens are added automatically when needed. If a later signature is cancelled, **Resume funding** continues the existing job, including after a reload. Select a job to deliver, verify with World App, settle, or refund. These are on-chain jobs using test DemoUSD.
+
+The **Guided demo**, linked from the homepage and navigation at `/credits`, uses a warm visual theme and a persistent demo notice. It leads with the sample job and places the credit sandbox under **Advanced: test World ID with demo credits**; neither sends blockchain transactions or changes wallet balances. The sample walkthrough uses simulated identities. Creating your own credit job requires two different people with World App to complete verification. Credit forms and verification always return to `/credits`, and a return link leads back to the wallet app.
+
+`npm test` checks wallet controls and World ID recovery using simulated wallets and mocked World responses. No live transactions are sent.
+
+The homepage includes an interactive 3D explanation of one person controlling two agents. Selected wallet jobs show their confirmed escrow state, including verification holds, payout, and refund. The guided demo and credit sandbox have corresponding credit-only views. The scenes load on demand, respect reduced motion, and keep text and controls available without WebGL. After editing the scenes, run `npm run build` to rebuild the self-hosted browser assets.
 
 `self-pay` prints `SAME_HUMAN`, `CLIENT_CLAIM_IGNORED`, `NOT_A_WORLD_PROOF`, and `PAYOUT_RELEASED`, then `SELF_PAY_PASSED`.
 
 The earlier revoke desk is still at `/desk`. The 90-second cut is at `/film`. The animated settlement, separate from the pool, is at `/flow`.
+
+## Local development with MetaMask
+
+Run `npm run dev:connected` to use the local interface with the existing Rebind wallet backend. Open http://127.0.0.1:43210/#wallet-desk. MetaMask signs transactions on World Chain Sepolia using test DemoUSD and test ETH. The hosted backend handles World ID verification and settlement; production credentials stay on that backend. Wallet verification sessions are isolated from credit sandbox sessions and reset when the local server restarts.
+
+`npm run dev` remains the standalone mode and requires local chain and World ID environment settings for wallet settlement. The credit sandbox and automated chain simulation are separate from the connected wallet workflow.
 
 ## On-chain settlement
 

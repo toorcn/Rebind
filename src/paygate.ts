@@ -6,6 +6,7 @@ import { openState, sealState, type DurableState, type WorldPrompt } from "./dur
 import { mountChainDesk } from "./chain";
 import { renderFlowPage } from "./flow-page";
 import { mountJobDesk } from "./jobs";
+import type { HostedWallet } from "./hosted-wallet";
 import { JobPool } from "./pool";
 import { RebindDesk, type RebindRequest } from "./rebind";
 import { AgentBookRegistry, type AgentRecord } from "./registry";
@@ -17,6 +18,7 @@ export type PaygateMode = "foil" | "win";
 export interface AppOptions {
   mode?: PaygateMode;
   rebindTtlMs?: number;
+  hostedWallet?: HostedWallet;
 }
 
 const PAID_RESOURCE = "/api/resource/premium";
@@ -611,6 +613,7 @@ export function createApp(registry: AgentBookRegistry, options: AppOptions = {})
 
   app.use("/vendor", express.static(join(__dirname, "..", "public")));
   app.use(express.json());
+  if (options.hostedWallet) app.use("/chain", options.hostedWallet.relay);
   if (stateSecret) {
     rememberDesk(app, registry, desk, deviceCodes, prompts, grants, pool, jobDevices, jobPrompts, stateSecret);
   }
@@ -928,7 +931,7 @@ export function createApp(registry: AgentBookRegistry, options: AppOptions = {})
     grantPaidResource(req, res, registry, sessions, grants, mode);
   });
 
-  mountJobDesk(app, { pool, jobDevices, jobPrompts });
+  mountJobDesk(app, { pool, jobDevices, jobPrompts, walletStatus: options.hostedWallet?.status });
   mountChainDesk(app, { devices: jobDevices, prompts: jobPrompts });
 
   return app;

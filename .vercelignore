@@ -1,0 +1,11 @@
+.git
+.omx
+.playwright-mcp
+.playwright-cli
+output
+node_modules
+.env
+.env.*
+contracts/broadcast
+contracts/cache
+contracts/out

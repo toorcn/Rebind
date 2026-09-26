@@ -4,15 +4,19 @@ import express from "express";
 import { createApp } from "./paygate";
 import { runFilm } from "./film-run";
 import { AgentBookRegistry } from "./registry";
+import { createHostedWallet } from "./hosted-wallet";
 
 const port = Number(process.env.PORT ?? "43210");
-const host = process.env.HOST ?? "0.0.0.0";
+const host = process.env.HOST ?? "127.0.0.1";
 
 void express;
 
 const foil = process.env.FOIL_MODE === "1";
 const registry = new AgentBookRegistry();
-const app = createApp(registry, { mode: foil ? "foil" : "win" });
+const hostedWallet = !process.env.VERCEL && process.env.REBIND_HOSTED_WALLET === "1"
+  ? createHostedWallet()
+  : undefined;
+const app = createApp(registry, { mode: foil ? "foil" : "win", hostedWallet });
 
 app.post("/demo/film", async (_req, res) => {
   try {

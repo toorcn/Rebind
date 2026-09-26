@@ -1,4 +1,7 @@
 node_modules/
+.env
+.env.*
+!.env.example
 dist/
 *.sqlite
 *.log
@@ -8,3 +11,9 @@ contracts/lib/
 contracts/out/
 contracts/cache/
 contracts/broadcast/
+.vercel
+.env*
+.omx/
+.playwright-cli/
+.playwright-mcp/
+output/

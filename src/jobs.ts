@@ -1,18 +1,21 @@
 import type { Express, Request, Response } from "express";
 import type { WorldPrompt } from "./durable-state";
-import { chainStatus } from "./chain";
+import { chainStatus, type ChainStatus } from "./chain";
 import { renderJobPage } from "./job-page";
 import { JobPool, WORLD_ISSUER, type Seat } from "./pool";
 import { runSelfPay } from "./self-pay-run";
+import { runWalkthrough } from "./demo-walkthrough";
 import { pullValidatedSubject, startDeviceGrant } from "./world-oidc";
 
 export interface JobDeskHooks {
   pool: JobPool;
   jobDevices: Map<string, string>;
   jobPrompts: Map<string, WorldPrompt>;
+  walletStatus?: () => Promise<ChainStatus>;
 }
 
 const IGNORED_CLAIM_FIELDS = ["differentHumans", "buyerSubject", "workerSubject"] as const;
+const RETRYABLE_WORLD_ERRORS = new Set(["token_failed", "server_error", "temporarily_unavailable"]);
 
 function wantsJson(req: Request): boolean {
   return (req.header("content-type") ?? "").includes("application/json");
@@ -66,24 +69,31 @@ function sendJob(req: Request, res: Response, status: number, body: unknown, fla
     return;
   }
   const suffix = flash ? `?flash=${flash}` : "";
-  res.redirect(`/${suffix}`);
+  res.redirect(`/credits${suffix}#desk`);
 }
 
 export function mountJobDesk(app: Express, hooks: JobDeskHooks): void {
-  app.get("/", (req: Request, res: Response) => {
+  app.get("/", async (req: Request, res: Response) => {
     res.type("html").send(
       renderJobPage({
         jobs: hooks.pool.list(),
         ledger: hooks.pool.ledger(),
         prompts: hooks.jobPrompts,
         flash: flashOf(req.query.flash),
-        chain: chainStatus(),
+        chain: hooks.walletStatus ? await hooks.walletStatus() : chainStatus(),
       })
     );
   });
 
-  app.get("/credits", (_req: Request, res: Response) => {
-    res.redirect("/");
+  app.get("/credits", (req: Request, res: Response) => {
+    res.type("html").send(renderJobPage({
+      view: "credits",
+      jobs: hooks.pool.list(),
+      ledger: hooks.pool.ledger(),
+      prompts: hooks.jobPrompts,
+      flash: flashOf(req.query.flash),
+      chain: chainStatus(),
+    }));
   });
 
   app.get("/pool", (_req: Request, res: Response) => {
@@ -185,7 +195,7 @@ export function mountJobDesk(app: Express, hooks: JobDeskHooks): void {
         verificationUriComplete: live.verificationUriComplete ?? live.verificationUri,
       });
       if (!wantsJson(req)) {
-        res.redirect("/");
+        res.redirect("/credits#desk");
         return;
       }
       res.status(201).json({
@@ -207,24 +217,37 @@ export function mountJobDesk(app: Express, hooks: JobDeskHooks): void {
       sendJob(req, res, 400, { error: "job id and role are required" }, "bad");
       return;
     }
-    const deviceCode = hooks.jobDevices.get(deviceKey(id, seat));
+    const key = deviceKey(id, seat);
+    const deviceCode = hooks.jobDevices.get(key);
     if (!deviceCode) {
+      hooks.jobPrompts.delete(key);
       sendJob(req, res, 404, { error: "No live device grant for this seat" }, "world-error");
       return;
     }
     const result = await pullValidatedSubject(deviceCode);
+    // A replacement code may have been requested while this check was in flight.
+    if (hooks.jobDevices.get(key) !== deviceCode) {
+      sendJob(req, res, 409, { attached: false, status: "replaced" });
+      return;
+    }
     if (result.kind === "pending") {
       sendJob(req, res, 202, { attached: false, status: "pending" }, "waiting");
       return;
     }
     if (result.kind === "denied") {
+      if (RETRYABLE_WORLD_ERRORS.has(result.error)) {
+        sendJob(req, res, 502, { attached: false, error: result.error }, "world-error");
+        return;
+      }
+      hooks.jobDevices.delete(key);
+      hooks.jobPrompts.delete(key);
       sendJob(req, res, 403, { attached: false, error: result.error }, "not-approved");
       return;
     }
     try {
       const job = hooks.pool.attachProof(id, seat, { subject: result.subject, issuer: WORLD_ISSUER });
-      hooks.jobDevices.delete(deviceKey(id, seat));
-      hooks.jobPrompts.delete(deviceKey(id, seat));
+      hooks.jobDevices.delete(key);
+      hooks.jobPrompts.delete(key);
       sendJob(req, res, 200, { attached: true, job, ledger: hooks.pool.ledger() });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Attach failed";
@@ -235,5 +258,8 @@ export function mountJobDesk(app: Express, hooks: JobDeskHooks): void {
   app.post("/demo/self-pay", (_req: Request, res: Response) => {
     const report = runSelfPay();
     res.status(report.passed ? 200 : 500).json(report);
+  });
+  app.post("/demo/walkthrough", (_req: Request, res: Response) => {
+    res.json(runWalkthrough());
   });
 }
