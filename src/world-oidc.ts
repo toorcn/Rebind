@@ -34,6 +34,11 @@ function clientCredentials(): { id: string; secret: string } | null {
   return { id, secret };
 }
 
+/** Device authorization accepts HTTP Basic. A secret in the form body is rejected. */
+function basicAuth(client: { id: string; secret: string }): string {
+  return `Basic ${Buffer.from(`${client.id}:${client.secret}`).toString("base64")}`;
+}
+
 /** Starts a real device-authorization grant when a sandbox OIDC client is configured. */
 export async function startDeviceGrant(): Promise<LiveDeviceGrant | null> {
   const client = clientCredentials();
@@ -41,11 +46,14 @@ export async function startDeviceGrant(): Promise<LiveDeviceGrant | null> {
 
   const response = await fetch(DEVICE_ENDPOINT, {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      authorization: basicAuth(client),
+    },
     body: new URLSearchParams({ client_id: client.id, scope: "openid" }),
   });
   if (!response.ok) {
-    const detail = await response.text();
+    const detail = (await response.text()).replaceAll(client.secret, "[redacted]");
     throw new Error(`World device authorization failed: ${response.status} ${detail}`);
   }
   const body = (await response.json()) as {
@@ -69,28 +77,44 @@ export async function startDeviceGrant(): Promise<LiveDeviceGrant | null> {
   };
 }
 
+export type PullResult =
+  | { kind: "pending" }
+  | { kind: "validated"; subject: string }
+  | { kind: "denied"; error: string };
+
+const STILL_PENDING = new Set(["authorization_pending", "slow_down"]);
+
 /**
  * Polls the token endpoint once and checks the ID token on the server.
- * Returns the pairwise subject only after signature, issuer, audience, and expiry check out.
+ * The pairwise subject is returned only after signature, issuer, audience, and expiry check out.
  */
-export async function pullValidatedSubject(deviceCode: string): Promise<string | null> {
+export async function pullValidatedSubject(deviceCode: string): Promise<PullResult> {
   const client = clientCredentials();
-  if (!client) return null;
+  if (!client) return { kind: "denied", error: "World client is not configured" };
 
   const response = await fetch(TOKEN_ENDPOINT, {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      authorization: basicAuth(client),
+    },
     body: new URLSearchParams({
       grant_type: "urn:ietf:params:oauth:grant-type:device_code",
       device_code: deviceCode,
       client_id: client.id,
-      client_secret: client.secret,
     }),
   });
-  if (!response.ok) return null;
+  if (!response.ok) {
+    const detail = (await response.json().catch(() => null)) as { error?: string } | null;
+    const error = detail?.error ?? "token_failed";
+    if (STILL_PENDING.has(error)) return { kind: "pending" };
+    return { kind: "denied", error };
+  }
   const body = (await response.json()) as { id_token?: string };
-  if (!body.id_token) return null;
-  return verifyIdToken(body.id_token, client.id);
+  if (!body.id_token) return { kind: "denied", error: "missing_id_token" };
+  const subject = await verifyIdToken(body.id_token, client.id);
+  if (!subject) return { kind: "denied", error: "id_token_rejected" };
+  return { kind: "validated", subject };
 }
 
 async function verifyIdToken(idToken: string, audience: string): Promise<string | null> {

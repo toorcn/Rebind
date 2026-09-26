@@ -123,6 +123,14 @@ export class AgentBookRegistry {
     return [...this.agents.values()].sort((a, b) => a.registeredAt - b.registeredAt);
   }
 
+  /** Replaces every row. Used when a signed cookie is the source of truth. */
+  replaceAll(records: AgentRecord[]): void {
+    this.agents.clear();
+    for (const record of records) {
+      this.agents.set(record.agentKey, record);
+    }
+  }
+
   close(): void {
     this.agents.clear();
   }

@@ -97,4 +97,11 @@ export class RebindDesk {
   list(): RebindRequest[] {
     return [...this.requests.values()];
   }
+
+  replaceAll(requests: RebindRequest[]): void {
+    this.requests.clear();
+    for (const request of requests) {
+      this.requests.set(request.id, request);
+    }
+  }
 }

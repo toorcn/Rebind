@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import { readFileSync } from "fs";
 import { join } from "path";
 import express, { type Express, type Request, type Response } from "express";
+import { openState, sealState, type DurableState } from "./durable-state";
 import { RebindDesk, type RebindRequest } from "./rebind";
 import { AgentBookRegistry, type AgentRecord } from "./registry";
 import { signAgentRequest, verifyAgentRequest } from "./sign";
@@ -244,7 +245,7 @@ function renderWinForms(rebinds: RebindRequest[], redirectUri: string): string {
       <p>Server finish <input name="requestId" value="${latest ? escapeHtml(latest.id) : ""}" /> <button>Attach if validated</button></p>
     </form>
     <h2>Live World App</h2>
-    <p class="muted">Calls sandbox.auth.world.org. Without <code>WORLD_CLIENT_ID</code> and <code>WORLD_CLIENT_SECRET</code> this returns 501. The device code stays on the server. Register this exact redirect: <code>${escapeHtml(redirectUri)}</code></p>
+    <p class="muted">Calls sandbox.auth.world.org. Start shows a code and a World link. Approve it in the sandbox World App, then Pull. The device code stays in a signed cookie, not in the page. Redirect: <code>${escapeHtml(redirectUri)}</code></p>
     <form id="live-start">
       <p>Start live rebind for <input name="agentKey" value="K2" /> <button>Start</button></p>
     </form>
@@ -261,7 +262,22 @@ function renderWinForms(rebinds: RebindRequest[], redirectUri: string): string {
           body: JSON.stringify(body),
         });
         const payload = await response.json();
-        document.getElementById("live-out").textContent = response.status + "\\n" + JSON.stringify(payload, null, 2);
+        const out = document.getElementById("live-out");
+        const link = payload.verificationUriComplete || payload.verificationUri;
+        if (payload.requestId) {
+          const field = document.querySelector("#live-pull input[name=requestId]");
+          if (field) field.value = payload.requestId;
+        }
+        out.textContent = response.status + "\\n" + JSON.stringify(payload, null, 2);
+        if (link) {
+          const anchor = document.createElement("a");
+          anchor.href = link;
+          anchor.textContent = "Open World approval";
+          anchor.target = "_blank";
+          anchor.rel = "noreferrer";
+          out.appendChild(document.createElement("br"));
+          out.appendChild(anchor);
+        }
       }
       document.getElementById("live-start").addEventListener("submit", (event) => {
         const agentKey = new FormData(event.target).get("agentKey");
@@ -274,6 +290,55 @@ function renderWinForms(rebinds: RebindRequest[], redirectUri: string): string {
     </script>`;
 }
 
+function rememberDesk(
+  app: Express,
+  registry: AgentBookRegistry,
+  desk: RebindDesk,
+  deviceCodes: Map<string, string>,
+  grants: GrantLogEntry[],
+  secret: string
+): void {
+  app.use((req, res, next) => {
+    const token = readCookie(req, "rebind_state");
+    const state = token ? openState(token, secret) : null;
+    registry.replaceAll(state?.agents ?? []);
+    desk.replaceAll(state?.rebinds ?? []);
+    deviceCodes.clear();
+    grants.length = 0;
+    if (state) {
+      for (const [id, code] of Object.entries(state.deviceCodes)) {
+        if (typeof code === "string") deviceCodes.set(id, code);
+      }
+      for (const entry of state.grants.slice(-30)) {
+        grants.push(entry);
+      }
+    }
+
+    let saved = false;
+    const originalEnd = res.end;
+    res.end = function persistEnd(this: Response, ...args: unknown[]) {
+      if (!saved) {
+        saved = true;
+        const nextState: DurableState = {
+          agents: registry.listAll(),
+          rebinds: desk.list(),
+          deviceCodes: Object.fromEntries(deviceCodes),
+          grants: grants.slice(-30).map((entry) => ({ ...entry })),
+        };
+        res.cookie("rebind_state", sealState(nextState, secret), {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: true,
+          path: "/",
+          maxAge: 60 * 60 * 1000,
+        });
+      }
+      return originalEnd.apply(this, args as never);
+    } as Response["end"];
+    next();
+  });
+}
+
 export function createApp(registry: AgentBookRegistry, options: AppOptions = {}): Express {
   const mode: PaygateMode = options.mode ?? "win";
   const app = express();
@@ -281,8 +346,12 @@ export function createApp(registry: AgentBookRegistry, options: AppOptions = {})
   const grants: GrantLogEntry[] = [];
   const desk = new RebindDesk(options.rebindTtlMs ?? 10 * 60 * 1000);
   const deviceCodes = new Map<string, string>();
+  const stateSecret = process.env.WORLD_CLIENT_SECRET ?? "";
 
   app.use(express.json());
+  if (stateSecret) {
+    rememberDesk(app, registry, desk, deviceCodes, grants, stateSecret);
+  }
   app.use(express.urlencoded({ extended: false }));
 
   app.get("/", (_req: Request, res: Response) => {
@@ -520,13 +589,17 @@ export function createApp(registry: AgentBookRegistry, options: AppOptions = {})
       res.status(404).json({ error: "No live device grant for this request" });
       return;
     }
-    const subject = await pullValidatedSubject(deviceCode);
-    if (!subject) {
+    const result = await pullValidatedSubject(deviceCode);
+    if (result.kind === "pending") {
       res.status(202).json({ attached: false, status: "pending" });
       return;
     }
-    const request = desk.markValidated(requestId, subject, "https://sandbox.auth.world.org");
-    const record = registry.attachWorldRebind(request.agentKey, `${request.issuer}|${subject}`);
+    if (result.kind === "denied") {
+      res.status(403).json({ attached: false, error: result.error });
+      return;
+    }
+    const request = desk.markValidated(requestId, result.subject, "https://sandbox.auth.world.org");
+    const record = registry.attachWorldRebind(request.agentKey, `${request.issuer}|${result.subject}`);
     res.json({ attached: true, record });
   });
 
